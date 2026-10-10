@@ -3,6 +3,7 @@
 A reusable local dashboard and metric engine with four views: results, funnel, channels and data health. The included **Harbor & Pine** tenant and every displayed value are fictional examples. No live connector, credential, customer export, hosted deployment or active scheduler is included.
 
 ```sh
+npm ci --ignore-scripts
 npm test
 npm run check
 npm run build
@@ -10,7 +11,15 @@ npm run privacy
 npm run preview
 ```
 
-Requires Node 22 or newer, with no runtime dependencies or installation. The preview binds only to `127.0.0.1:4327`. The build produces a static fictional demo under `dist/`; it refuses private runtime input variables. There is no authentication layer for remote deployment: this is a loopback review tool.
+Requires Node 22 or newer. The protected runtime uses the pinned `jose` dependency for JWT verification. The preview binds only to `127.0.0.1:4327`. The build produces a static fictional demo under `dist/`; it refuses private runtime input variables. These review paths remain separate from the authenticated runtime.
+
+## Protected runtime
+
+`npm start` serves a single externally configured tenant behind an existing Cloudflare Access application, validates signed assertions at the origin, and reads an owner-only persistent store. Startup requires explicit Access issuer/audience, viewer allowlist, hostname, tenant file and state directory. There is no default login, credential creation, HTTP write endpoint or source connection.
+
+`npm run import:report` validates external snapshot/observation files and atomically publishes their projected presentation to that store. Invalid or older candidates preserve the last accepted report. Freshness uses evidence timestamps, not file-save times. `npm run qa:runtime` opens a separate loopback-only fictional review server with an ephemeral test identity; it is excluded from the production image.
+
+See [protected runtime setup](docs/RUNTIME.md) for configuration, storage, observation format, verification and rollback. Deployment and identity-provider setup are operator actions; publishing this source performs neither.
 
 The engine keeps missing data unavailable, requires matching tenant/account/date/currency/timezone scope and reconciliation evidence, rejects duplicate records and computes ratios from additive totals. Source run metadata never establishes business coverage. The example metric definitions are proposed business rules, including a 30-day cohort and VAT-inclusive cash; they require review before real reporting.
 

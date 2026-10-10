@@ -4,13 +4,22 @@
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
-  "engines": {"node": ">=22"},
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "node --test",
     "check": "node tools/check.mjs",
     "build": "node tools/build.mjs",
     "preview": "node tools/serve.mjs",
     "qa": "node tools/qa.mjs",
-    "privacy": "node tools/privacy-check.mjs"
+    "privacy": "node tools/privacy-check.mjs",
+    "start": "node tools/runtime.mjs",
+    "import:report": "node tools/import-report.mjs",
+    "qa:runtime": "node tools/qa-runtime.mjs",
+    "check:container": "node tools/container-check.mjs"
+  },
+  "dependencies": {
+    "jose": "6.2.12"
   }
 }
