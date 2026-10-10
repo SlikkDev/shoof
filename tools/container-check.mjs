@@ -17,7 +17,8 @@ try {
   run(['run', '-d', '--name', name, ...common, 'shoof-runtime:check']); running = true;
   const waitProbe = "let status=0; for(let i=0;i<50;i++){try{const r=await fetch('http://127.0.0.1:8080/healthz');status=r.status;if(status===200)break;}catch{} await new Promise(r=>setTimeout(r,100));} console.log(status);";
   assert.equal(run(['exec', name, 'node', '--input-type=module', '-e', waitProbe]), '200');
-  const anonymous = "const r=await fetch('http://127.0.0.1:8080/api/report',{headers:{host:'report.example.invalid'}}); console.log(r.status);";
+  // Use node:http for an explicit origin Host; fetch controls the Host header.
+  const anonymous = "import {get} from 'node:http'; await new Promise((resolve,reject)=>{const r=get({hostname:'127.0.0.1',port:8080,path:'/api/report',headers:{host:'report.example.invalid'}},res=>{console.log(res.statusCode);res.resume();res.on('end',resolve);});r.on('error',reject);});";
   assert.equal(run(['exec', name, 'node', '--input-type=module', '-e', anonymous]), '401');
   run(['restart', name]);
   assert.equal(run(['exec', name, 'node', '--input-type=module', '-e', waitProbe]), '200');
