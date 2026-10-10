@@ -1,46 +1,64 @@
 # Protected reporting runtime
 
-The runtime is a single-tenant, read-only HTTP service. It does not create an Access application, select an identity provider, deploy itself, create credentials or read a marketing API. Keep source configuration and private evidence outside Git, static output and image layers.
+Shoof has a built-in email/password login for one owner. There is no public signup, email delivery, social login or external identity-provider setup. The single-tenant reporting runtime, private imports and persistent presentation store remain separate from the fictional static demo. No source-reader credential or automatic marketing connection is created by signing in.
 
-## Authentication and configuration
+## One-time owner setup
 
-Configure an existing Cloudflare Access self-hosted application for the exact public hostname and every path. Allow only the intended viewer identities; do not create bypass policies. The runtime independently verifies the signed `Cf-Access-Jwt-Assertion` at the origin using `jose`, restricted to RS256, configured issuer/audience, required expiration/issued-at/subject/email/type claims, and an exact email allowlist. It ignores forwarded email/host headers. This prevents a direct-origin request from bypassing login. No Access service-token login is supported.
-
-Public signing keys are fetched only from the configured `https://<team>.cloudflareaccess.com/cdn-cgi/access/certs` endpoint. Redirects are rejected, response size is limited to 64 KiB, and the fetch deadline includes the body. The key cache lasts ten minutes with a thirty-second rotation-fetch cooldown. A known cached signing key remains usable within that window during an outage; absent/expired keys fail closed. Tokens are never logged, persisted or sent to a provider. Access session duration/revocation is owned by the identity provider; valid issued tokens remain accepted until expiration, so revocation is not instantaneous at a directly reachable origin. Keep sessions short and restrict origin exposure operationally.
-
-Required environment:
+Provide these runtime variables through the existing private host configuration:
 
 | Name | Purpose |
 | --- | --- |
-| `REPORTING_ACCESS_ISSUER` | Exact HTTPS Access team origin, without trailing slash |
-| `REPORTING_ACCESS_AUDIENCE` | Exact application audience; no token-derived configuration |
-| `REPORTING_PUBLIC_HOST` | Lowercase hostname only, without scheme or port |
-| `REPORTING_VIEWER_EMAILS` | Comma-separated exact email addresses; at most twenty |
-| `REPORTING_TENANT_FILE` | Absolute path to an owner-only external tenant JSON, mode `private` |
-| `REPORTING_STATE_DIR` | Existing owner-only external directory for accepted presentation state |
+| `REPORTING_PUBLIC_HOST` | Exact lowercase HTTPS hostname, with no scheme, path or port |
+| `REPORTING_TENANT_FILE` | Absolute external owner-only tenant JSON, mode `private` |
+| `REPORTING_STATE_DIR` | Existing external owner-only directory for authentication and report state |
 
-Optional listener settings: `REPORTING_PORT` defaults to 8080; `REPORTING_BIND` defaults to loopback. The Docker image explicitly binds `0.0.0.0` inside its container. It runs as `node` (UID 1000); publish no host port when using the existing container proxy network. A missing/malformed configuration refuses startup. Runtime tenant and viewer configuration are fixed for the process lifetime; changing them requires restarting only this service.
+`REPORTING_PORT` defaults to 8080 and `REPORTING_BIND` to loopback. The container binds `0.0.0.0` internally. Keep the existing HTTPS reverse proxy and publish no application host port. HTTPS is required; the application trusts neither forwarded host/IP/identity headers nor old Access assertions. The former Access issuer/audience/viewer settings are no longer used.
 
-All UI/assets/report paths require both the configured Host and a valid assertion. Only GET/HEAD are accepted. `/api/report` accepts no query selectors and projects presentation fields only. No generic file, export, token, import or sync HTTP endpoint exists. The only unauthenticated route is content-free `/healthz` when the actual TCP peer and Host are container loopback; forwarded headers cannot qualify. Configure the container healthcheck here, not against a private report or a fictional-data string.
+After the owner approves account creation, run this **in a private interactive terminal** with the runtime environment and state volume mounted:
 
-See [Cloudflare token validation](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/) and [jose](https://github.com/panva/jose).
+```sh
+npm run auth:setup
+```
 
-## Durable imports
+The owner enters an email and a password twice; password entry is hidden. Use 15–128 characters (at most 512 UTF-8 bytes), preferably a unique password-manager passphrase. Passwords are not accepted in arguments, environment variables or piped input. Do not send them in chat or put them in Git. Existing accounts cannot be overwritten by this command. With no owner set up, sign-in is unavailable; the browser cannot create the account. No mail service or email verification is implied: the operator establishes the owner's identity.
 
-Mount tenant/input files read-only outside `/app`, mode 0600 and owned by the runtime UID. Mount a separate named volume at `/var/lib/shoof` (the image's default state directory), mode 0700 and owned by UID 1000. For bind mounts, an operator must provision those ownership/permission settings explicitly. Do not mount state under the web root. The runtime supports a read-only container root filesystem, with only the state mount writable. Parent directories must remain controlled by the operator.
+Forgotten password, suspected session theft, or a deliberate owner-email change uses the same private operator path:
 
-Run `npm run import:report` locally in the protected runtime environment with two additional explicit paths:
+```sh
+npm run auth:setup -- --reset
+```
 
-- `REPORTING_SNAPSHOT_FILE`: the existing business snapshot schema shown by `examples/snapshot.demo.json`, with matching tenant/workspace/timezone/currency and honest coverage/reconciliation evidence.
-- `REPORTING_OBSERVATIONS_FILE`: optional dated-observation envelope below. Omission deliberately publishes an empty observation list; each import replaces the whole presentation, not an incremental merge.
+This requires typing `RESET`, a new email/password, and confirmation. It revokes every session and clears the login-attempt budget. Never run it without the owner's authorization. There is no password-reset email, browser account-management endpoint, second account or role hierarchy.
 
-The command performs no network request. It runs the metric evidence gates, validates source observations and publishes only their projected presentation. Raw snapshot extras, customer rows, evidence references and account IDs are not copied to the serving store. Invalid, oversized, duplicate, cross-tenant, future-dated or older business-report candidates fail before replacement. Successful replacement uses the existing exclusive lock, owner-only temporary file, fsync and atomic rename. A concurrent operation can return busy; retry later rather than deleting its lock. A crash can leave a lock; preserve state and confirm the old process is stopped before operator recovery. A corrupt state fails closed and is not overwritten automatically. There is no browser rollback/edit API.
+## Authentication boundaries
 
-No state means `/api/report` returns 503, never demo substitute data. A rejected import leaves the previous report and its accepted timestamp unchanged. Restarting the HTTP process reads the same mounted state. Data stored only in the container filesystem will not survive replacement; mount configuration and backups remain deployment responsibilities. Keep an owner-controlled backup outside the web root before an import; restoring a prior state file requires a deliberate operator recovery, not re-importing an older snapshot. The atomic file store is single-host storage, not a distributed or power-loss durability guarantee. See [Coolify storage](https://coolify.io/docs/core/persistent-storage/storage-mounts/overview).
+- The pinned `@node-rs/argon2` library hashes passwords with Argon2id, 19 MiB memory, two iterations, parallelism one, a random 16-byte salt and 32-byte output. Stored hash parameters are validated before verification; corrupt state cannot select an unbounded hash cost. The pinned `cookie` package handles serialization/parsing, and `read` provides hidden terminal input. No custom password hashing is implemented.
+- Each login creates a fresh opaque 256-bit random session. Only its SHA-256 digest is persisted. The `__Host-shoof` cookie is host-only, `Secure`, `HttpOnly`, `SameSite=Strict`, `Path=/`, with an absolute eight-hour expiry. It is never put in localStorage, URLs, logs or report responses. Login replaces the current browser session; at most ten sessions remain, evicting the oldest when full.
+- Every private request checks current server-side state. Sign-out revokes that session; an operator password reset revokes all sessions immediately for subsequent authorization checks, without a process restart. Sessions and revocations survive restarts through the private mounted store. Already-authorized in-flight reads may finish. Rolling back an authentication backup can restore old credentials/sessions; reset the owner after restoring storage and before serving traffic.
+- Login and logout accept only POST JSON with the fixed AJAX header `X-Shoof-Request: 1` and exact configured HTTPS `Origin`. Cross-site/same-site Fetch Metadata values are rejected; CORS is never enabled. This implements the [OWASP custom-header CSRF pattern](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#employing-custom-request-headers-for-ajaxapi), with Origin and cookie defenses as well. No GET changes authentication state. Do not add cross-origin callers or HTML-form fallbacks without revisiting this boundary.
+- All usernames share a durable limit of ten password checks per fifteen minutes. A changed username, IP header or process restart cannot reset it. Successful attempts also consume the budget. Existing sessions remain usable while login is limited. This deliberately simple single-owner policy can let an attacker delay new sign-ins; the budget recovers automatically and authorized terminal reset is available. No distributed/per-IP limiter or trusted-proxy setup is required.
+- One login body/hash runs at a time per process; the existing store lock also serializes hashes across processes. Parallel attempts receive a retry response. Bodies are capped at 2 KiB, passwords at 512 UTF-8 bytes, and login processing has a five-second connection deadline. HTTP headers and connections are bounded. No password, raw token or user-supplied error is logged.
+
+Only `/login`, `/login.css` and `/login.mjs` are public, containing generic Shoof UI and no tenant identity/data. Anonymous `/` redirects to `/login`; private assets and `/api/report` return 401. `/api/login` and `/api/logout` are the only HTTP mutations. The report/data routes remain read-only and exact, with no tenant selector, file download, import or sync route. Authentication/store errors fail closed. Missing report state returns 503, never fictional substitute data.
+
+The content-free `/healthz` exception still requires the actual container-loopback TCP peer and loopback Host. Configure healthchecks there; forwarded headers cannot qualify. Public responses use no-store/noindex, CSP, nosniff and HSTS. Reverse-proxy access logs must omit request bodies/cookies and protect server logs. Use HTTPS redirect at the proxy; do not expose the internal HTTP port.
+
+## Durable data and private storage
+
+Mount the tenant/input files read-only outside `/app`, mode 0600 and owned by the runtime UID. Mount a dedicated Shoof volume at `/var/lib/shoof`, mode 0700, UID 1000. The image runs as `node`; it supports a read-only root filesystem, with only this state mount writable. Bind mounts must be provisioned with matching ownership. Keep all storage ancestors operator-controlled. The same atomic store holds separate tenant-scoped authentication and reporting files; neither is a public asset.
+
+`npm run import:report` takes the configured tenant/state paths plus:
+
+- `REPORTING_SNAPSHOT_FILE`: external business snapshot matching tenant/workspace/timezone/currency.
+- `REPORTING_OBSERVATIONS_FILE`: optional external dated-observation envelope, shown below.
+
+The local command performs no network call. It validates metric evidence gates and publishes projected fields only. Unknown payload extras, customer rows, evidence references and account IDs are excluded. Invalid, oversized, duplicate, cross-tenant, future or older candidates preserve the accepted presentation. Date spans over 366 days are rejected before enumeration. Each publication replaces the whole presentation; omitting observations deliberately publishes an empty list.
+
+Exclusive lock, owner-only temporary file, fsync and atomic rename protect the single-host state. A busy operation is retried later; do not delete a live lock. A crash can leave a lock requiring deliberate operator recovery after confirming the old process stopped. Corrupt state fails closed and is not automatically overwritten. Mounts survive container replacement; they are not backups or distributed/power-loss durability guarantees. Preserve private backups outside the web root before updates. Do not blindly restore old authentication sessions.
 
 ## Dated observation envelope
 
-The following is wholly fictional and does not create a source connection:
+This example is fictional and creates no source connection:
 
 ```json
 {
@@ -62,19 +80,18 @@ The following is wholly fictional and does not create a source connection:
 }
 ```
 
-Source IDs must exist in the business snapshot. Periods are half-open and source-native, at most 366 days; missing timezone remains null. Each metric has unique dated nonnegative integer values, with units `count` or `seconds`; no currency/ratio inference is provided. An empty list has unavailable total, not zero. Only listed dates contribute. Unknown fields are stripped. Limits: 25 sources, twelve metrics per source and 366 values per metric.
+Source IDs must exist in the business snapshot. Periods are half-open and source-native, at most 366 days; unknown timezone remains null. Metrics have unique dated nonnegative integer values in `count` or `seconds`, with no currency/ratio inference. Empty observations have unavailable totals, not zero. Limits: 25 sources, twelve metrics per source, 366 values per metric.
 
-`origin` is `manual`, `ui-snapshot` or `synced`. Only `synced` may carry a `lastSuccessfulReadAt`, and must provide it; this label is an operator assertion backed by the input's evidence, not proof that this runtime executed a read. Source observations always retain unverified coverage, pending reconciliation and `reportReady: false`. They cannot populate business KPIs. UI separates observation period, observation timestamp, read freshness and local save time. The fixed 48-hour recent/stale threshold is a display heuristic, not a coverage rule or provider-specific SLA. A future evidence timestamp is unknown on read; importing it is rejected.
-
-The existing `runSyncTick` remains disabled by default and separate from presentation publication. A future trusted adapter must use an explicitly authorized scoped transport, verify source-native timezones, normalize only allowed aggregate metrics and produce this envelope. It may then call `publish` locally. No scheduling, source credential loader or broad-token fallback is provided here. The viewer's Access assertion is never an upstream data credential.
+Only origin `synced` may carry a successful-read timestamp, and must provide it; this is a trusted operator assertion, not proof the runtime performed a read. Observations retain unverified coverage, pending reconciliation and `reportReady: false`. They cannot populate business KPIs. The 48-hour recent/stale label is a display heuristic, not proof of coverage. Save time never refreshes source evidence. The caller-driven sync interface remains disabled and separate from publication.
 
 ## Deployment and review sequence
 
-1. Review the generic PR and its tests; pin the reviewed image/commit. Keep all build inputs fictional. `npm ci --ignore-scripts`, tests, syntax/build/privacy checks run in CI, followed by an isolated container build and fictional mounted-state smoke test.
-2. Obtain the separate approval for the access gate and audience, and any identity-provider enrollment. Configure the all-path Access policy, then supply issuer/audience/allowlist externally. No paid plan or grant is implicit in these instructions.
-3. Deploy this runtime only, provision its private input/state mounts and use the content-free healthcheck. Do not restart a shared proxy or another application. Keep the old static deployment available for rollback, without any private input baked into it.
-4. Before importing real data, verify anonymous denial on UI, assets and report routes, missing/forged/expired/wrong-audience token denial directly at the origin, and successful access for the approved viewer. Verify an unauthorized viewer is denied and there is no bypass route or public volume mount.
-5. Import a reviewed dated seed using the local command. Verify exact source/date/totals and unavailable business gates through authenticated UI. Restart/redeploy this service and verify the state survives its mount. Backups and restore must be tested separately before operational reliance.
-6. Enable no source read until its independent reader scope/recurrence is approved. On authentication failure, stop private service or restore a known protected version; never fall back to public private-data files. On data-import failure, keep the last good state and investigate.
+1. Independently review the exact source, including authentication and bootstrap, and require current CI. The build context includes only generic source, never tenant inputs, owner passwords or session state.
+2. Configure this app's existing HTTPS proxy, hostname, private tenant input and durable volume. No external identity-provider enrollment is needed. Do not restart shared hosting or expose a host port.
+3. Obtain owner authorization for setup; the owner chooses the password in the hidden terminal prompt. Verify native login and anonymous/direct-origin denial using fictional data first. Verify logout, invalid credentials, protected assets and restart persistence.
+4. Only after the authenticated boundary is verified, copy/import the reviewed private seed and check its original dates, unavailable business gates and owner view. Restart Shoof only and verify both login and data persistence.
+5. Keep source-reader grants and recurring imports separate. This login is not an upstream marketing credential.
 
-`npm run qa:runtime` starts a loopback-only fictional gateway with in-memory generated test keys, allowing browser layout review without an actual identity provider. It is excluded from the Docker build context/image. It does not test real Cloudflare login; that requires the approved deployed gate. CI's container probe checks private mounted import, anonymous origin denial, read-only root and restart persistence; JWT claim/signature tests use generated keys independently.
+`npm run qa:runtime` creates a temporary loopback-only fictional account and data. A QA proxy adapts localhost Origin/Host, but does not inject an authenticated session or bypass native login. It prints that temporary fixture's credentials for browser testing and is excluded from the production image. CI checks native login, mounted data, anonymous denial and session/report persistence after container restart. Actual public HTTPS and owner setup remain deployment checks.
+
+For rollback, preserve the private state and pin a previously reviewed compatible login runtime. Do not roll back to the old Access-only server unless its independent provider gate and origin configuration have first been established. Never expose private static files as a fallback.

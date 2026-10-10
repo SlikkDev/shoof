@@ -7,7 +7,7 @@ RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund \
     && chmod 700 /var/lib/shoof
 COPY --chown=node:node src ./src
 COPY --chown=node:node web ./web
-COPY --chown=node:node tools/runtime.mjs tools/import-report.mjs ./tools/
+COPY --chown=node:node tools/runtime.mjs tools/import-report.mjs tools/auth-setup.mjs ./tools/
 USER node
 ENV REPORTING_BIND=0.0.0.0 REPORTING_PORT=8080 REPORTING_STATE_DIR=/var/lib/shoof
 EXPOSE 8080

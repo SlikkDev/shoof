@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const allowed = /^(?:AGENTS\.md|README\.md|package(?:-lock)?\.json|Dockerfile|\.dockerignore|\.gitignore|\.github\/workflows\/ci\.yml|docs\/[A-Z-]+\.md|(?:src|tools|test)\/[a-z-]+(?:\.test)?\.mjs|web\/(?:index\.html|styles\.css|app\.mjs)|examples\/(?:tenant|snapshot)\.demo\.json)$/;
+const allowed = /^(?:AGENTS\.md|README\.md|package(?:-lock)?\.json|Dockerfile|\.dockerignore|\.gitignore|\.github\/workflows\/ci\.yml|docs\/[A-Z-]+\.md|(?:src|tools|test)\/[a-z-]+(?:\.test)?\.mjs|web\/(?:index\.html|styles\.css|app\.mjs|login\.html|login\.css|login\.mjs)|examples\/(?:tenant|snapshot)\.demo\.json)$/;
 const patterns = [
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
   /\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|AKIA[A-Z0-9]{16})\b/,
