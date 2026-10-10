@@ -10,6 +10,7 @@
     "check": "node tools/check.mjs",
     "build": "node tools/build.mjs",
     "preview": "node tools/serve.mjs",
-    "qa": "node tools/qa.mjs"
+    "qa": "node tools/qa.mjs",
+    "privacy": "node tools/privacy-check.mjs"
   }
 }

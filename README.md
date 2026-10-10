@@ -1,11 +1,12 @@
 # Shoof
 
-A reusable local dashboard and metric engine with four views: results, funnel, channels and data health. The included **Harbor & Pine** tenant and every displayed value are fictional examples. No live connector, credential, customer export, hosted deployment or scheduler is included.
+A reusable local dashboard and metric engine with four views: results, funnel, channels and data health. The included **Harbor & Pine** tenant and every displayed value are fictional examples. No live connector, credential, customer export, hosted deployment or active scheduler is included.
 
 ```sh
 npm test
 npm run check
 npm run build
+npm run privacy
 npm run preview
 ```
 
@@ -31,11 +32,14 @@ The presentation response excludes workspace/account identities, evidence URLs, 
 
 - `src/read-contract.mjs`: injected, paginated aggregate-read interface with scope/date checks, duplicate/cursor protection and field allowlisting. It performs no network request itself. A trusted connector must enforce its actual authorized, read-only API operations.
 - `src/manual-import.mjs`: dated JSON aggregate import with source units and a content hash. Parsing and exhausted pagination do not establish coverage or reconciliation.
+- `src/sync.mjs` and `src/observation-store.mjs`: caller-driven sync ticks, bounded private persistence, overlap protection and separate read freshness. Disabled by default; no timer or live transport. See `docs/SYNC.md` for the private-host contract and recovery limits.
 - `docs/INTEGRATION.md`: automated/manual source sequence and evidence gates.
 - `docs/DATA-BOUNDARIES.md`: nonsecret tenant configuration, private observations and secrets.
 - `docs/RELEASE-REVIEW.md`: source review and licensing notes.
 
 Browser QA can reuse an existing external Playwright installation without installing packages in this project. Set `REPORTING_QA_PACKAGE` to its absolute package.json path and `REPORTING_QA_BROWSER` to an installed Chromium executable, then run `npm run qa`. QA starts a temporary loopback demo server and writes fictional screenshots/PDF to ignored `artifacts/`. No machine-specific paths are committed.
+
+Pull requests and pushes to `main` run tests, syntax checks, the fictional build and public-source guards in GitHub Actions. Actions are pinned by commit, the job has read-only repository access, and no private secrets or runtime data are configured. `npm run privacy` checks reviewed source paths, common credential/local-path patterns and demo build output. It supplements human source/history/artifact review; it cannot identify every form of private content or replace a dedicated secret scan.
 
 ## Publication and licensing
 

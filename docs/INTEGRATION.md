@@ -19,4 +19,4 @@ The manual helper accepts the same aggregate rows plus version 1, `origin: manua
 
 ## Remaining implementation
 
-Production connector bindings, private persistence, coverage verification, source-specific CSV parsing, CRM canonicalization, paid attribution and authorization for multi-user hosting remain outside this local foundation. The mock contract and tests can be developed before selecting a remote Git repository. Do not connect new accounts merely because a platform is listed in the demo.
+The generic tick interface and private local observation store are implemented and tested with synthetic transports; see `SYNC.md`. Production connector bindings, live recurrence, coverage verification, source-specific CSV parsing, CRM canonicalization, paid attribution and authorization for multi-user hosting remain outside this local foundation. Do not connect new accounts merely because a platform is listed in the demo.
