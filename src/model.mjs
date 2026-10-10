@@ -2,6 +2,20 @@ import { METRICS, unavailable } from './catalog.mjs';
 
 const validDay = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) &&
   Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
+const validText = value => typeof value === 'string' && value.trim().length > 0 && value.length <= 200 && !/[\x00-\x1f]/.test(value);
+const validStamp = value => typeof value === 'string' && value.length <= 40 && Number.isFinite(Date.parse(value));
+function validatePresentation(snapshot) {
+  if (!validText(snapshot.mode) || !validText(snapshot.timezone) || typeof snapshot.currency !== 'string' || !/^[A-Z]{3}$/.test(snapshot.currency)) throw new Error('Invalid report presentation');
+  new Intl.DateTimeFormat('en', { timeZone: snapshot.timezone });
+  if (!validStamp(snapshot.asOf)) throw new Error('Invalid evidence as-of timestamp');
+  if (!Array.isArray(snapshot.sources) || !snapshot.sources.length) throw new Error('Invalid source registry');
+  for (const source of snapshot.sources) {
+    if (!source || !['id', 'label', 'group', 'connection'].every(key => validText(source[key])) || !validText(source.coverage?.status) || !validText(source.reconciliation?.status)) throw new Error('Invalid source presentation');
+    if (source.evidenceObservedAt !== null && !validStamp(source.evidenceObservedAt)) throw new Error('Invalid source evidence timestamp');
+    if (source.lastSuccessfulSync !== null && !validStamp(source.lastSuccessfulSync)) throw new Error('Invalid source sync timestamp');
+    if (source.latestBusinessDate !== null && !validDay(source.latestBusinessDate)) throw new Error('Invalid source business date');
+  }
+}
 export function daysInPeriod(period) {
   if (!validDay(period.start) || !validDay(period.endExclusive) || period.start >= period.endExclusive) throw new Error('Invalid half-open reporting period');
   const days = [];
@@ -96,11 +110,11 @@ export function evaluateMetric(id, snapshot) {
 
 export function buildReport(snapshot) {
   daysInPeriod(snapshot.period);
-  if (!Number.isFinite(Date.parse(snapshot.asOf))) throw new Error('Invalid evidence as-of timestamp');
+  validatePresentation(snapshot);
   return {
     schemaVersion: 1,
     mode: snapshot.mode,
-    period: snapshot.period,
+    period: { start: snapshot.period.start, endExclusive: snapshot.period.endExclusive },
     timezone: snapshot.timezone,
     currency: snapshot.currency,
     asOf: snapshot.asOf,

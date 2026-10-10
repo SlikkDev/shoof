@@ -9,7 +9,7 @@ export function validateTenant(input) {
   if (input.schemaVersion !== 1 || !['demo','private'].includes(input.mode)) throw new Error('Invalid tenant version or mode');
   for (const key of ['tenantId','workspaceId']) if (typeof input[key] !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(input[key])) throw new Error('Invalid tenant identity');
   if (typeof input.displayName !== 'string' || !input.displayName.trim() || input.displayName.length > 80 || /[\x00-\x1f]/.test(input.displayName)) throw new Error('Invalid display name');
-  if (!['ltr','rtl'].includes(input.direction) || !/^[A-Z]{3}$/.test(input.currency) || !/^#[0-9a-f]{6}$/i.test(input.accent)) throw new Error('Invalid presentation configuration');
+  if (!['ltr','rtl'].includes(input.direction) || typeof input.currency !== 'string' || !/^[A-Z]{3}$/.test(input.currency) || typeof input.accent !== 'string' || !/^#[0-9a-f]{6}$/i.test(input.accent)) throw new Error('Invalid presentation configuration');
   if (typeof input.locale !== 'string' || !input.locale || typeof input.timezone !== 'string' || !input.timezone) throw new Error('Explicit locale and timezone required');
   try { new Intl.DateTimeFormat(input.locale, {timeZone:input.timezone}); new Intl.NumberFormat(input.locale,{style:'currency',currency:input.currency}); } catch { throw new Error('Invalid locale, timezone or currency'); }
   return Object.freeze({...input});

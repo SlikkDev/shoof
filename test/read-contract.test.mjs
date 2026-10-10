@@ -14,3 +14,18 @@ test('tenant switch during a read invalidates all returned observations',async()
 test('dated manual aggregate imports retain provenance without declaring coverage',()=>{const input={...page(),schemaVersion:1,origin:'manual',period:context.period,exportedAt:'2025-01-04T00:00:00Z',units:{sessions:'sessions'}};const result=parseManualObservations(JSON.stringify(input),context);assert.equal(result.origin,'manual');assert.equal(result.coverage,'unverified');assert.match(result.exportHash,/^[a-f0-9]{64}$/);assert.equal(JSON.stringify(result).includes('sentinel'),false);assert.throws(()=>parseManualObservations(JSON.stringify({...input,units:{}}),context));assert.throws(()=>parseManualObservations(JSON.stringify({...input,rows:[row(),row()]}),context));});
 
 test('missing source timezone cannot default to the host timezone',()=>{assert.throws(()=>normalizeObservationPage({...page(),timezone:undefined},{...context,timezone:undefined}));});
+test('transport receives only approved context fields and an immutable read operation',async()=>{
+  const extra={private:'fictional-private-sentinel'},injected={...context,kind:'unexpected-operation',extra,period:{...context.period,customerRows:[extra],workspaceId:'fictional-private-sentinel'}};
+  await collectObservations({context:injected,currentTenantId:()=>context.tenantId,transport:async request=>{
+    assert.deepEqual(request,{...context,cursor:null,kind:'read-observations'});
+    assert.throws(()=>{request.kind='unexpected-operation';},TypeError);
+    return page();
+  }});
+});
+test('manual observation period strips nested extras and provenance remains a string',()=>{
+  const injected={...context,period:{...context.period,customerRows:[{name:'fictional-private-sentinel'}]}};
+  const input={...page(),schemaVersion:1,origin:'manual',period:injected.period,exportedAt:'2025-01-04T00:00:00Z',units:{sessions:'sessions'}};
+  const result=parseManualObservations(JSON.stringify(input),injected);
+  assert.deepEqual(result.period,context.period);assert.equal(JSON.stringify(result).includes('fictional-private-sentinel'),false);
+  assert.throws(()=>parseManualObservations(JSON.stringify({...input,exportedAt:[input.exportedAt]}),context));
+});

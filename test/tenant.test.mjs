@@ -12,3 +12,14 @@ test('tenant configuration rejects secret fields, bad theme, missing timezone an
 test('private configuration and data load from outside the repository',async()=>{const dir=await mkdtemp(join(tmpdir(),'reporting-fixture-'));try{const config=join(dir,'tenant.json'),data=join(dir,'snapshot.json');await writeFile(config,JSON.stringify({...tenant,displayName:'Fictional Private Fixture',mode:'private'}));await writeFile(data,JSON.stringify(snapshot));const r=await loadReport({REPORTING_TENANT_FILE:config,REPORTING_SNAPSHOT_FILE:data});assert.equal(r.mode,'snapshot');assert.equal(r.tenant.displayName,'Fictional Private Fixture');}finally{await rm(dir,{recursive:true});}});
 test('runtime rejects one-sided or repository-contained private input paths',async()=>{await assert.rejects(loadReport({REPORTING_TENANT_FILE:'/fictional/path'}));await assert.rejects(loadReport({REPORTING_TENANT_FILE:new URL('../examples/tenant.demo.json',import.meta.url).pathname,REPORTING_SNAPSHOT_FILE:new URL('../examples/snapshot.demo.json',import.meta.url).pathname}));});
 test('public build refuses private input environment before reading any files',()=>{const result=spawnSync(process.execPath,[new URL('../tools/build.mjs',import.meta.url).pathname],{env:{...process.env,REPORTING_TENANT_FILE:'/not-a-real-file',REPORTING_SNAPSHOT_FILE:'/not-a-real-file'},encoding:'utf8'});assert.notEqual(result.status,0);assert.match(result.stderr,/Build refused/);});
+test('presentation strips unexpected nested period and source fields',()=>{
+  const s=structuredClone(snapshot),sentinel={customerRows:[{name:'fictional-private-sentinel'}],workspaceId:'fictional-private-sentinel',evidenceRef:'fictional-private-sentinel'};
+  Object.assign(s.period,sentinel);Object.assign(s.sources[0].coverage,sentinel);Object.assign(s.sources[0].reconciliation,sentinel);
+  const report=createReport(tenant,s);
+  assert.deepEqual(report.period,{start:s.period.start,endExclusive:s.period.endExclusive});
+  assert.equal(JSON.stringify(report).includes('fictional-private-sentinel'),false);
+  s.period.start='2024-01-01';assert.equal(report.period.start,snapshot.period.start);
+});
+test('tenant presentation does not coerce array values into public strings',()=>{
+  for(const key of ['currency','accent'])assert.throws(()=>validateTenant({...tenant,[key]:[tenant[key]]}),/Invalid presentation/);
+});

@@ -15,3 +15,10 @@ test('CRM identity is deduplicated after input identity validation',()=>{const s
 test('immature and unapproved attribution cannot release cohort ratios',()=>{const s=fresh();s.asOf='2025-01-09T00:00:00Z';assert.equal(evaluateMetric('mediaCac',s).value,null);s.asOf=fixture.asOf;s.attribution.status='pending';assert.equal(evaluateMetric('cashRoas',s).value,null);});
 test('successful sync is independent of verified coverage',()=>{const s=fresh();s.sources[0].coverage.status='unknown';const h=sourceHealth(s.sources[0],s.asOf,s);assert.equal(h.sync,'recent');assert.equal(h.reportReady,false);});
 test('invalid calendar dates and missing values are rejected',()=>{assert.throws(()=>daysInPeriod({start:'2025-02-30',endExclusive:'2025-03-04'}));const s=fresh();s.metricInputs.mediaSpend.records[0].spendMinor=null;assert.equal(evaluateMetric('mediaSpend',s).value,null);});
+test('report presentation rejects nested objects and coerced arrays in scalar fields',()=>{
+  const paths=[['mode'],['timezone'],['currency'],['asOf'],...['id','label','group','connection','evidenceObservedAt','lastSuccessfulSync','latestBusinessDate'].map(key=>['sources',0,key]),['sources',0,'coverage','status'],['sources',0,'reconciliation','status']];
+  for(const path of paths)for(const wrap of [value=>[value],()=>({private:'fictional-sentinel'})]){
+    const s=fresh(),parent=path.slice(0,-1).reduce((value,key)=>value[key],s),key=path.at(-1);parent[key]=wrap(parent[key]);
+    assert.throws(()=>buildReport(s),undefined,path.join('.'));
+  }
+});

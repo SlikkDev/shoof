@@ -27,10 +27,10 @@ export function normalizeObservationPage(page,context) {
 export async function collectObservations({transport,currentTenantId,context,maxPages=100}) {
   validateContext(context);
   if (typeof transport!=='function'||typeof currentTenantId!=='function'||!Number.isInteger(maxPages)||maxPages<1||maxPages>1000) throw new Error('Bounded existing read transport required');
-  const fixed=structuredClone(context),rows=[],cursors=new Set(),keys=new Set();let cursor=null;
+  const fixed={tenantId:context.tenantId,sourceId:context.sourceId,accountIds:[...context.accountIds],metricKeys:[...context.metricKeys],timezone:context.timezone,period:{start:context.period.start,endExclusive:context.period.endExclusive}},rows=[],cursors=new Set(),keys=new Set();let cursor=null;
   for (let index=0;index<maxPages;index++) {
     if (currentTenantId()!==fixed.tenantId) throw new Error('Tenant changed');
-    const request=Object.freeze({kind:'read-observations',...structuredClone(fixed),cursor});
+    const request=Object.freeze({...structuredClone(fixed),cursor,kind:'read-observations'});
     const raw=await transport(request);
     if (currentTenantId()!==fixed.tenantId) throw new Error('Tenant changed');
     const page=normalizeObservationPage(raw,fixed);
