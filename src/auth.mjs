@@ -34,13 +34,13 @@ export async function createAuth({tenant, directory, ownerEmail, publicHost}, {c
   const origin = 'https://' + publicHost, store = await createObservationStore(directory);
   const scope = {tenantId: tenant.tenantId, sourceId: 'authentication', jobId: 'owner'};
   const now = () => { const value = clock(); must(stampValid(value)); return value; };
-  const blank = () => ({schemaVersion: 2, tenantId: tenant.tenantId, workspaceId: tenant.workspaceId, ownerEmail, publicHost, userId: newToken(), attempts: {magic: [], passkey: []}, links: [], challenges: [], passkeys: [], sessions: []});
+  const blank = () => ({schemaVersion: 3, tenantId: tenant.tenantId, workspaceId: tenant.workspaceId, ownerEmail, publicHost, userId: newToken(), attempts: {magic: [], passkey: []}, links: [], challenges: [], passkeys: [], sessions: []});
   function checked(s) {
-    must(s && s.schemaVersion === 2 && s.tenantId === tenant.tenantId && s.workspaceId === tenant.workspaceId && s.ownerEmail === ownerEmail && s.publicHost === publicHost && tokenValid(s.userId));
+    must(s && [2, 3].includes(s.schemaVersion) && s.tenantId === tenant.tenantId && s.workspaceId === tenant.workspaceId && s.ownerEmail === ownerEmail && s.publicHost === publicHost && tokenValid(s.userId));
     for (const kind of ['magic', 'passkey']) must(Array.isArray(s.attempts?.[kind]) && s.attempts[kind].length <= 30 && s.attempts[kind].every(stampValid));
     for (const [key, max] of [['sessions', 10], ['links', 10], ['challenges', 10], ['passkeys', 5]]) must(Array.isArray(s[key]) && s[key].length <= max);
     const sessions = s.sessions.map(v => { must(hexValid(v.digest) && stampValid(v.createdAt) && v.expiresAt - v.createdAt === sessionSeconds * 1000 && stampValid(v.expiresAt) && (v.credentialId === null || bytesValid(v.credentialId))); return {digest: v.digest, createdAt: v.createdAt, expiresAt: v.expiresAt, credentialId: v.credentialId}; });
-    const links = s.links.map(v => { must(hexValid(v.digest) && hexValid(v.browser) && stampValid(v.createdAt) && stampValid(v.expiresAt) && v.expiresAt - v.createdAt === lifetime.magic); return {digest: v.digest, browser: v.browser, createdAt: v.createdAt, expiresAt: v.expiresAt}; });
+    const links = s.links.map(v => { must(hexValid(v.digest) && (s.schemaVersion === 3 || hexValid(v.browser)) && stampValid(v.createdAt) && stampValid(v.expiresAt) && v.expiresAt - v.createdAt === lifetime.magic); return {digest: v.digest, createdAt: v.createdAt, expiresAt: v.expiresAt}; });
     const challenges = s.challenges.map(v => { must(tokenValid(v.id) && tokenValid(v.challenge) && ['register', 'authenticate'].includes(v.kind) && hexValid(v.browser) && (v.session === null || hexValid(v.session)) && stampValid(v.createdAt) && stampValid(v.expiresAt) && v.expiresAt - v.createdAt === lifetime[v.kind]); return {id: v.id, challenge: v.challenge, kind: v.kind, browser: v.browser, session: v.session, createdAt: v.createdAt, expiresAt: v.expiresAt}; });
     const passkeys = s.passkeys.map(v => { must(bytesValid(v.id) && bytesValid(v.publicKey, 4096) && stampValid(v.counter) && stampValid(v.createdAt)); return {id: v.id, publicKey: v.publicKey, counter: v.counter, createdAt: v.createdAt}; });
     for (const [list, key] of [[sessions, 'digest'], [links, 'digest'], [challenges, 'id'], [passkeys, 'id']]) must(new Set(list.map(v => v[key])).size === list.length);
@@ -53,23 +53,22 @@ export async function createAuth({tenant, directory, ownerEmail, publicHost}, {c
   function charge(s, kind, instant) { s.attempts[kind] = s.attempts[kind].filter(v => instant - v < 15 * minute); if (s.attempts[kind].length >= (kind === 'magic' ? 10 : 30)) return false; s.attempts[kind].push(instant); return true; }
   function grant(s, previous, instant, credentialId = null) { const token = newToken(); s.sessions = s.sessions.filter(v => live(v, instant) && (!tokenValid(previous) || v.digest !== digest(previous))).slice(-9); s.sessions.push({digest: digest(token), createdAt: instant, expiresAt: instant + sessionSeconds * 1000, credentialId}); return {status: 'accepted', token}; }
   return Object.freeze({
-    async requestMagic(email, browser) {
-      if (!tokenValid(browser)) throw new Error('Invalid browser flow');
+    async requestMagic(email) {
       return locked(async tx => {
         const stored = await tx.read(), s = stored ? checked(stored) : blank(), instant = now(); prune(s, instant);
         const allowed = charge(s, 'magic', instant), token = newToken();
         const eligible = allowed && typeof email === 'string' && email.length <= 254 && email.trim().toLowerCase() === ownerEmail;
-        if (eligible) s.links.push({digest: digest(token), browser: digest(browser), createdAt: instant, expiresAt: instant + lifetime.magic});
+        if (eligible) s.links.push({digest: digest(token), createdAt: instant, expiresAt: instant + lifetime.magic});
         await tx.write(s);
         return eligible ? {to: ownerEmail, token, url: origin + '/login#token=' + token} : null;
       });
     },
     async cancelMagic(token) { if (!tokenValid(token)) return; return locked(async tx => { const stored = await tx.read(); if (!stored) return; const s = checked(stored); s.links = s.links.filter(v => v.digest !== digest(token)); await tx.write(s); }); },
-    async redeemMagic(token, browser, previous) {
-      if (!tokenValid(token) || !tokenValid(browser)) return {status: 'denied'};
+    async redeemMagic(token, previous) {
+      if (!tokenValid(token)) return {status: 'denied'};
       return locked(async tx => {
         const stored = await tx.read(); if (!stored) return {status: 'denied'}; const s = checked(stored), instant = now();
-        const link = s.links.find(v => v.digest === digest(token) && v.browser === digest(browser) && live(v, instant));
+        const link = s.links.find(v => v.digest === digest(token) && live(v, instant));
         if (!link) return {status: 'denied'}; s.links = s.links.filter(v => v !== link);
         const result = grant(s, previous, instant); await tx.write(s); return result;
       });

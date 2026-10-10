@@ -9,7 +9,7 @@ const send=(server,path,headers={},method='GET',input)=>new Promise((resolve,rej
 const close=server=>new Promise(resolve=>server.close(resolve));
 const postHeaders=f=>({host:f.publicHost,origin:'https://'+f.publicHost,'content-type':'application/json','x-shoof-request':'1'});
 const capture=()=>{const messages=[];return {messages,mailer:{sendMagic:async message=>{messages.push(message);}}};};
-async function login(server,f,box){const sent=await send(server,'/api/magic/request',postHeaders(f),'POST',{email:f.email});assert.equal(sent.status,202);const flow=sent.headers['set-cookie'][0].split(';')[0],mail=box.messages.at(-1);assert.ok(mail);const confirmed=await send(server,'/api/magic/confirm',{...postHeaders(f),cookie:flow},'POST',{token:mail.token});assert.equal(confirmed.status,204);return {host:f.publicHost,cookie:confirmed.headers['set-cookie'][0].split(';')[0]};}
+async function login(server,f,box){const sent=await send(server,'/api/magic/request',postHeaders(f),'POST',{email:f.email});assert.equal(sent.status,202);assert.equal(sent.headers['set-cookie'],undefined);const mail=box.messages.at(-1);assert.ok(mail);const confirmed=await send(server,'/api/magic/confirm',postHeaders(f),'POST',{token:mail.token});assert.equal(confirmed.status,204);return {host:f.publicHost,cookie:confirmed.headers['set-cookie'][0].split(';')[0]};}
 
 test('generic public login and scanner GETs reveal no tenant data; reports/assets need native sessions',async t=>{
  const f=await fixture();t.after(f.cleanup);const box=capture(),server=await startRuntime(f.config,box);t.after(()=>close(server));await(await createRuntimeData(f.config)).publish(f.snapshot,f.observations);
@@ -17,10 +17,13 @@ test('generic public login and scanner GETs reveal no tenant data; reports/asset
  for(const path of ['/api/report','/api/session','/styles.css','/app.mjs','/security.mjs']){const r=await send(server,path,{...anon,'cf-access-jwt-assertion':'a.b.c','cf-access-authenticated-user-email':f.email,'x-forwarded-for':'127.0.0.1'});assert.equal(r.status,401);assert.equal(r.headers['x-shoof-session'],undefined);}
  for(const path of ['/login','/login.css','/login.mjs','/webauthn.js']){const r=await send(server,path,anon);assert.equal(r.status,200);assert.equal(r.body.includes(f.email),false);assert.equal(r.body.includes(f.tenant.displayName),false);}
  assert.equal((await send(server,'/api/report')).status,421);assert.equal((await send(server,'/healthz')).status,200);assert.equal((await send(server,'/healthz',anon)).status,404);
- const requested=await send(server,'/api/magic/request',postHeaders(f),'POST',{email:f.email}),mail=box.messages[0],flow=requested.headers['set-cookie'][0].split(';')[0];
+ const requested=await send(server,'/api/magic/request',postHeaders(f),'POST',{email:f.email}),mail=box.messages[0];
  assert.equal(requested.body.includes(mail.token),false);assert.equal((await send(server,'/login',anon)).status,200);assert.equal((await send(server,'/api/magic/confirm',anon)).status,405);
+ assert.equal(requested.headers['set-cookie'],undefined);
+ for(const method of ['GET','HEAD'])assert.equal((await send(server,'/api/magic/confirm',anon,method)).status,405);
+ assert.equal((await send(server,'/login',{...anon,purpose:'prefetch'},'HEAD')).status,200);
+ const accepted=await send(server,'/api/magic/confirm',{...postHeaders(f),cookie:'__Host-shoof-flow='+'b'.repeat(43)},'POST',{token:mail.token});assert.equal(accepted.status,204);
  assert.equal((await send(server,'/api/magic/confirm',postHeaders(f),'POST',{token:mail.token})).status,403);
- const accepted=await send(server,'/api/magic/confirm',{...postHeaders(f),cookie:flow},'POST',{token:mail.token});assert.equal(accepted.status,204);
  const headers={host:f.publicHost,cookie:accepted.headers['set-cookie'][0].split(';')[0]},r=await send(server,'/api/report',headers);assert.equal(r.status,200);assert.equal(JSON.parse(r.body).observations[0].metrics[0].total,7);assert.equal(r.headers['x-shoof-session'],'active');assert.equal(r.headers['referrer-policy'],'no-referrer');
  const parallel=await Promise.all(Array.from({length:12},(_,i)=>send(server,['/','/app.mjs','/styles.css'][i%3],headers)));assert.ok(parallel.every(v=>v.status===200));
  for(const path of ['/api/report?tenantId=other','/tenant.json','/smtp.json','/.env','/state/','/src/auth.mjs','/%2e%2e/tenant.json','/api/signup','/api/login'])assert.equal((await send(server,path,headers)).status,404);

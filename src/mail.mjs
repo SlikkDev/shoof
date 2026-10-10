@@ -11,7 +11,7 @@ export function createMailer(input) {
   const config = validateSmtp(input);
   const transport = nodemailer.createTransport({host: config.host, port: config.port, secure: config.secure, requireTLS: !config.secure, tls: {rejectUnauthorized: true, minVersion: 'TLSv1.2'}, ...(config.user === undefined ? {} : {auth: {user: config.user, pass: config.password}}), pool: false, connectionTimeout: 5000, greetingTimeout: 5000, socketTimeout: 10000, logger: false, debug: false, disableFileAccess: true, disableUrlAccess: true});
   return Object.freeze({
-    async sendMagic({to, url}) { await transport.sendMail({from: {name: 'Shoof', address: config.from}, to: validateOwnerEmail(to), subject: 'Your Shoof sign-in link', text: `Open this link in the same browser where you requested it, then choose Continue. It expires in 10 minutes and can be used once.\n\n${url}\n\nIf you did not request this, ignore this email.`, disableFileAccess: true, disableUrlAccess: true}); },
+    async sendMagic({to, url}) { await transport.sendMail({from: {name: 'Shoof', address: config.from}, to: validateOwnerEmail(to), subject: 'Your Shoof sign-in link', text: `Open this link to sign in to Shoof. You can use any browser or device. It expires in 10 minutes and can be used once.\n\n${url}\n\nThis link signs in as you. Do not forward it. If you did not request this, ignore this email.`, disableFileAccess: true, disableUrlAccess: true}); },
     close: () => transport.close(),
   });
 }

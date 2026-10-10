@@ -6,23 +6,22 @@ import { createAuth, sessionToken, sessionCookie, sessionSeconds, newToken } fro
 import { fixture } from '../tools/runtime-fixtures.mjs';
 import { fakeAuthenticator } from '../tools/passkey-fixtures.mjs';
 const authFile = async f => join(f.directory, (await readdir(f.directory)).find(n => /^[a-f0-9]{64}\.json$/.test(n)));
-async function signIn(auth,f,browser=newToken()){const mail=await auth.requestMagic(f.email,browser);assert.ok(mail);const result=await auth.redeemMagic(mail.token,browser);assert.equal(result.status,'accepted');return result.token;}
+async function signIn(auth,f){const mail=await auth.requestMagic(f.email);assert.ok(mail);const result=await auth.redeemMagic(mail.token);assert.equal(result.status,'accepted');return result.token;}
 async function enroll(auth,token,browser=newToken(),key=fakeAuthenticator()){const c=await auth.options('register',browser,token);assert.equal(c.status,'accepted');assert.equal((await auth.verify('register',c.ceremonyId,key.registration(c.options),browser,token)).status,'accepted');return {key,userId:c.options.user.id};}
 
-test('magic links are scoped, browser-bound, expiring, hashed and single use; unknown email gets no delivery',async t=>{
-  const f=await fixture();t.after(f.cleanup);let instant=1800000000000;const auth=await createAuth(f.config,{clock:()=>instant}),browser=newToken();
-  assert.equal(await auth.requestMagic('other@example.invalid',browser),null);
-  const mail=await auth.requestMagic(f.email.toUpperCase(),browser);assert.equal(mail.to,f.email);assert.equal(new URL(mail.url).origin,'https://'+f.publicHost);assert.equal(new URL(mail.url).search,'');
-  const state=await readFile(await authFile(f),'utf8');assert.equal(state.includes(mail.token),false);assert.equal(state.includes(browser),false);
-  assert.equal((await auth.redeemMagic(mail.token,newToken())).status,'denied');
-  const first=await auth.redeemMagic(mail.token,browser);assert.equal(first.status,'accepted');assert.equal((await auth.redeemMagic(mail.token,browser)).status,'denied');
-  const second=await auth.requestMagic(f.email,browser);instant+=600000;assert.equal((await auth.redeemMagic(second.token,browser)).status,'denied');
-  const third=await auth.requestMagic(f.email,browser);await auth.cancelMagic(third.token);assert.equal((await auth.redeemMagic(third.token,browser)).status,'denied');
+test('magic links are scoped, portable, expiring, hashed and single use; unknown email gets no delivery',async t=>{
+  const f=await fixture();t.after(f.cleanup);let instant=1800000000000;const auth=await createAuth(f.config,{clock:()=>instant});
+  assert.equal(await auth.requestMagic('other@example.invalid'),null);
+  const mail=await auth.requestMagic(f.email.toUpperCase());assert.equal(mail.to,f.email);assert.equal(new URL(mail.url).origin,'https://'+f.publicHost);assert.equal(new URL(mail.url).search,'');
+  const state=await readFile(await authFile(f),'utf8');assert.equal(state.includes(mail.token),false);assert.equal(Object.hasOwn(JSON.parse(state).links[0],'browser'),false);
+  const first=await auth.redeemMagic(mail.token);assert.equal(first.status,'accepted');assert.equal((await auth.redeemMagic(mail.token)).status,'denied');
+  const second=await auth.requestMagic(f.email);instant+=600000;assert.equal((await auth.redeemMagic(second.token)).status,'denied');
+  const third=await auth.requestMagic(f.email);await auth.cancelMagic(third.token);assert.equal((await auth.redeemMagic(third.token)).status,'denied');
 });
 
 test('session rotation, restart, absolute expiry and logout preserve opaque server-side boundaries',async t=>{
-  const f=await fixture();t.after(f.cleanup);let instant=1800000000000;const auth=await createAuth(f.config,{clock:()=>instant}),browser=newToken();
-  const first=await signIn(auth,f,browser);const mail=await auth.requestMagic(f.email,browser),second=await auth.redeemMagic(mail.token,browser,first);
+  const f=await fixture();t.after(f.cleanup);let instant=1800000000000;const auth=await createAuth(f.config,{clock:()=>instant});
+  const first=await signIn(auth,f);const mail=await auth.requestMagic(f.email),second=await auth.redeemMagic(mail.token,first);
   assert.equal(await auth.authenticated(first),false);assert.equal(await (await createAuth(f.config,{clock:()=>instant})).authenticated(second.token),true);
   assert.equal((await readFile(await authFile(f),'utf8')).includes(second.token),false);
   instant+=sessionSeconds*1000;assert.equal(await auth.authenticated(second.token),false);
@@ -31,9 +30,9 @@ test('session rotation, restart, absolute expiry and logout preserve opaque serv
 
 test('magic request budget is persistent and shared across addresses; existing sessions still work',async t=>{
   const f=await fixture();t.after(f.cleanup);let instant=1800000000000;const auth=await createAuth(f.config,{clock:()=>instant});const token=await signIn(auth,f);
-  for(let i=0;i<9;i++)assert.equal(await auth.requestMagic(`other${i}@example.invalid`,newToken()),null);
-  const restart=await createAuth(f.config,{clock:()=>instant});assert.equal(await restart.requestMagic(f.email,newToken()),null);assert.equal(await restart.authenticated(token),true);
-  instant+=900000;assert.ok(await restart.requestMagic(f.email,newToken()));
+  for(let i=0;i<9;i++)assert.equal(await auth.requestMagic(`other${i}@example.invalid`),null);
+  const restart=await createAuth(f.config,{clock:()=>instant});assert.equal(await restart.requestMagic(f.email),null);assert.equal(await restart.authenticated(token),true);
+  instant+=900000;assert.ok(await restart.requestMagic(f.email));
 });
 
 test('passkey registration and login verify real signatures, user handle, counter, scope and replay',async t=>{
@@ -65,9 +64,9 @@ test('enrollment needs the same fresh session; challenges expire and sign-out in
 
 test('passkey removal revokes every session/link/challenge and requires fresh authentication',async t=>{
   const f=await fixture();t.after(f.cleanup);const auth=await createAuth(f.config),token=await signIn(auth,f),browser=newToken(),{key,userId}=await enroll(auth,token);
-  const mail=await auth.requestMagic(f.email,browser),c=await auth.options('authenticate',browser);
+  const mail=await auth.requestMagic(f.email),c=await auth.options('authenticate',browser);
   assert.equal(await auth.revokePasskey(key.id,newToken()),false);assert.equal(await auth.revokePasskey(key.id,token),true);
-  assert.equal(await auth.authenticated(token),false);assert.equal((await auth.redeemMagic(mail.token,browser)).status,'denied');assert.equal((await auth.verify('authenticate',c.ceremonyId,key.authentication(c.options,userId),browser)).status,'denied');
+  assert.equal(await auth.authenticated(token),false);assert.equal((await auth.redeemMagic(mail.token)).status,'denied');assert.equal((await auth.verify('authenticate',c.ceremonyId,key.authentication(c.options,userId),browser)).status,'denied');
   const again=await signIn(auth,f);assert.deepEqual((await auth.account(again)).passkeys,[]);
 });
 
@@ -96,12 +95,30 @@ test('registration accepts only none attestation and stores no certificate ident
 });
 
 test('concurrent redemption grants at most one session and passkey/challenge limits survive restart',async t=>{
- const f=await fixture();t.after(f.cleanup);let instant=1800000000000;const auth=await createAuth(f.config,{clock:()=>instant}),browser=newToken(),mail=await auth.requestMagic(f.email,browser);
- const results=await Promise.allSettled([auth.redeemMagic(mail.token,browser),auth.redeemMagic(mail.token,browser)]);const accepted=results.filter(r=>r.status==='fulfilled'&&r.value.status==='accepted');assert.equal(accepted.length,1);const token=accepted[0].value.token;
+ const f=await fixture();t.after(f.cleanup);let instant=1800000000000;const auth=await createAuth(f.config,{clock:()=>instant}),other=await createAuth(f.config,{clock:()=>instant}),mail=await auth.requestMagic(f.email);
+ const results=await Promise.allSettled([auth.redeemMagic(mail.token),other.redeemMagic(mail.token)]);const accepted=results.filter(r=>r.status==='fulfilled'&&r.value.status==='accepted');assert.equal(accepted.length,1);const token=accepted[0].value.token;
  for(let i=0;i<5;i++)await enroll(auth,token);
  assert.equal((await auth.options('register',newToken(),token)).status,'denied');
  for(let i=0;i<25;i++)assert.equal((await auth.options('authenticate',newToken())).status,'accepted');
  const restart=await createAuth(f.config,{clock:()=>instant});assert.equal((await restart.options('authenticate',newToken())).status,'limited');
  const state=JSON.parse(await readFile(await authFile(f)));assert.equal(state.challenges.length,10);assert.equal(state.passkeys.length,5);
  instant+=600000;assert.equal(await auth.revokePasskey(state.passkeys[0].id,token),false);instant+=300000;assert.equal((await restart.options('authenticate',newToken())).status,'accepted');
+});
+
+test('legacy browser-bound links upgrade without changing owner, passkeys or existing sessions',async t=>{
+ const f=await fixture();t.after(f.cleanup);const auth=await createAuth(f.config),token=await signIn(auth,f),enrolled=await enroll(auth,token),mail=await auth.requestMagic(f.email),file=await authFile(f);
+ const browser=newToken(),challenge=await auth.options('authenticate',browser);
+ const old=JSON.parse(await readFile(file));old.schemaVersion=2;old.links.forEach(link=>link.browser='a'.repeat(64));await writeFile(file,JSON.stringify(old));
+ const restart=await createAuth(f.config);assert.equal(await restart.authenticated(token),true);
+ const result=await restart.redeemMagic(mail.token);assert.equal(result.status,'accepted');
+ const migrated=JSON.parse(await readFile(file));assert.equal(migrated.schemaVersion,3);assert.equal(migrated.userId,old.userId);assert.deepEqual(migrated.passkeys,old.passkeys);assert.deepEqual(migrated.sessions.slice(0,1),old.sessions);assert.deepEqual(migrated.attempts,old.attempts);assert.deepEqual(migrated.challenges,old.challenges);
+ assert.equal((await restart.verify('authenticate',challenge.ceremonyId,enrolled.key.authentication(challenge.options,enrolled.userId),browser)).status,'accepted');
+ assert.equal((await restart.account(token)).passkeys[0].id,enrolled.key.id);
+ const newMail=await restart.requestMagic(f.email);assert.ok(newMail);const current=JSON.parse(await readFile(file));assert.equal(Object.hasOwn(current.links[0],'browser'),false);
+});
+
+test('multiple portable links remain independently single use across independent auth instances',async t=>{
+ const f=await fixture();t.after(f.cleanup);const a=await createAuth(f.config),b=await createAuth(f.config),one=await a.requestMagic(f.email),two=await a.requestMagic(f.email);
+ const first=await b.redeemMagic(one.token);assert.equal(first.status,'accepted');assert.equal((await a.redeemMagic(one.token)).status,'denied');
+ const second=await a.redeemMagic(two.token);assert.equal(second.status,'accepted');assert.equal(await b.authenticated(first.token),true);assert.equal(await b.authenticated(second.token),true);
 });

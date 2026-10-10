@@ -13,7 +13,7 @@ async function readJson(req, max) {
   if (!value || Array.isArray(value) || typeof value !== 'object') throw new Error('Invalid body'); return value;
 }
 const keys = (value, expected) => Object.keys(value).sort().join(',') === [...expected].sort().join(',');
-const genericMail = 'If this address is allowed, a sign-in link will arrive shortly. Open it in this browser.';
+const genericMail = 'If this address is allowed, a sign-in link will arrive shortly. Open it to sign in.';
 
 export async function startRuntime(config, {mailer = createMailer(config.smtp)} = {}) {
   const publicHost = validatePublicHost(config.publicHost), origin = 'https://' + publicHost;
@@ -46,10 +46,9 @@ export async function startRuntime(config, {mailer = createMailer(config.smtp)} 
           let input; try { input = await readJson(req, req.url.endsWith('/verify') ? 32768 : 2048); } catch { reply(400, 'Invalid request'); return; }
           if (req.url === '/api/magic/request') {
             if (!keys(input, ['email']) || typeof input.email !== 'string' || input.email.length > 254) { reply(400, 'Invalid request'); return; }
-            const browser = flow || newToken(); res.setHeader('Set-Cookie', sessionCookie(browser, false, true));
             // Return the same response before delivery; SMTP latency/errors do not
             // disclose whether the configured owner matched. No durable raw-token queue.
-            let delivery; try { delivery = await auth.requestMagic(input.email, browser); } catch { /* same public response */ }
+            let delivery; try { delivery = await auth.requestMagic(input.email); } catch { /* same public response */ }
             reply(202, genericMail);
             if (delivery) {
               const task = Promise.resolve().then(() => mailer.sendMagic(delivery)).catch(async () => { await auth.cancelMagic(delivery.token).catch(() => {}); }).finally(() => mailTasks.delete(task));
@@ -68,7 +67,7 @@ export async function startRuntime(config, {mailer = createMailer(config.smtp)} 
           let result;
           if (req.url === '/api/magic/confirm') {
             if (!keys(input, ['token'])) { reply(400, 'Invalid request'); return; }
-            result = await auth.redeemMagic(input.token, flow, token);
+            result = await auth.redeemMagic(input.token, token);
           } else {
             const kind = req.url.includes('/register/') ? 'register' : 'authenticate';
             if (req.url.endsWith('/options')) {
