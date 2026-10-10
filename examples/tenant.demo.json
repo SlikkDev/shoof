@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "tenantId": "fictional-harbor",
+  "workspaceId": "demo-workspace",
+  "displayName": "Harbor & Pine",
+  "mode": "demo",
+  "locale": "en-US",
+  "direction": "ltr",
+  "timezone": "Etc/UTC",
+  "currency": "USD",
+  "accent": "#4f46e5"
+}

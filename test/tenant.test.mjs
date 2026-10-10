@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile,writeFile,mkdtemp,rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { validateTenant,createReport,loadReport } from '../src/tenant.mjs';
+const tenant=JSON.parse(await readFile(new URL('../examples/tenant.demo.json',import.meta.url)));
+const snapshot=JSON.parse(await readFile(new URL('../examples/snapshot.demo.json',import.meta.url)));
+test('presentation uses injected tenant name and locale, without identity leakage',()=>{const t={...tenant,displayName:'Fictional Cedar',direction:'rtl',locale:'ar',accent:'#123456'};const s=structuredClone(snapshot);s.sources[0].evidenceRef='private-evidence-sentinel';s.sources[0].note='private-note-sentinel';const r=createReport(t,s),wire=JSON.stringify(r);assert.equal(r.tenant.displayName,'Fictional Cedar');assert.equal(r.tenant.direction,'rtl');for(const secret of ['demo-workspace','demo-account','private-evidence-sentinel','private-note-sentinel'])assert.equal(wire.includes(secret),false);});
+test('tenant configuration rejects secret fields, bad theme, missing timezone and crossed scope',()=>{assert.throws(()=>validateTenant({...tenant,apiKey:'fake-secret'}));assert.throws(()=>validateTenant({...tenant,accent:'url(example.invalid)'}));assert.throws(()=>validateTenant({...tenant,timezone:undefined}));assert.throws(()=>createReport({...tenant,workspaceId:'different'},snapshot));});
+test('private configuration and data load from outside the repository',async()=>{const dir=await mkdtemp(join(tmpdir(),'reporting-fixture-'));try{const config=join(dir,'tenant.json'),data=join(dir,'snapshot.json');await writeFile(config,JSON.stringify({...tenant,displayName:'Fictional Private Fixture',mode:'private'}));await writeFile(data,JSON.stringify(snapshot));const r=await loadReport({REPORTING_TENANT_FILE:config,REPORTING_SNAPSHOT_FILE:data});assert.equal(r.mode,'snapshot');assert.equal(r.tenant.displayName,'Fictional Private Fixture');}finally{await rm(dir,{recursive:true});}});
+test('runtime rejects one-sided or repository-contained private input paths',async()=>{await assert.rejects(loadReport({REPORTING_TENANT_FILE:'/fictional/path'}));await assert.rejects(loadReport({REPORTING_TENANT_FILE:new URL('../examples/tenant.demo.json',import.meta.url).pathname,REPORTING_SNAPSHOT_FILE:new URL('../examples/snapshot.demo.json',import.meta.url).pathname}));});
+test('public build refuses private input environment before reading any files',()=>{const result=spawnSync(process.execPath,[new URL('../tools/build.mjs',import.meta.url).pathname],{env:{...process.env,REPORTING_TENANT_FILE:'/not-a-real-file',REPORTING_SNAPSHOT_FILE:'/not-a-real-file'},encoding:'utf8'});assert.notEqual(result.status,0);assert.match(result.stderr,/Build refused/);});

@@ -1,0 +1,1127 @@
+{
+  "schemaVersion": 1,
+  "mode": "demo",
+  "fictional": true,
+  "workspaceId": "demo-workspace",
+  "period": {
+    "start": "2025-01-01",
+    "endExclusive": "2025-01-08"
+  },
+  "timezone": "Etc/UTC",
+  "currency": "USD",
+  "asOf": "2025-02-10T12:00:00Z",
+  "sources": [
+    {
+      "id": "meta_ads",
+      "label": "Meta Ads",
+      "group": "Paid",
+      "connection": "demo",
+      "identityVerified": true,
+      "accountIds": [
+        "demo-account"
+      ],
+      "evidenceObservedAt": "2025-02-10T12:00:00Z",
+      "lastSuccessfulSync": "2025-02-10T11:00:00Z",
+      "latestBusinessDate": "2025-01-07",
+      "freshnessHours": 48,
+      "coverage": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "complete",
+        "evidenceRef": "fictional-fixture",
+        "coveredDays": [
+          "2025-01-01",
+          "2025-01-02",
+          "2025-01-03",
+          "2025-01-04",
+          "2025-01-05",
+          "2025-01-06",
+          "2025-01-07"
+        ]
+      },
+      "reconciliation": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "passed",
+        "evidenceRef": "fictional-fixture"
+      }
+    },
+    {
+      "id": "google_ads",
+      "label": "Google Ads",
+      "group": "Paid",
+      "connection": "demo",
+      "identityVerified": true,
+      "accountIds": [
+        "demo-account"
+      ],
+      "evidenceObservedAt": "2025-02-10T12:00:00Z",
+      "lastSuccessfulSync": "2025-02-10T11:00:00Z",
+      "latestBusinessDate": "2025-01-07",
+      "freshnessHours": 48,
+      "coverage": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "complete",
+        "evidenceRef": "fictional-fixture",
+        "coveredDays": [
+          "2025-01-01",
+          "2025-01-02",
+          "2025-01-03",
+          "2025-01-04",
+          "2025-01-05",
+          "2025-01-06",
+          "2025-01-07"
+        ]
+      },
+      "reconciliation": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "passed",
+        "evidenceRef": "fictional-fixture"
+      }
+    },
+    {
+      "id": "ga4",
+      "label": "Website analytics",
+      "group": "Website",
+      "connection": "demo",
+      "identityVerified": true,
+      "accountIds": [
+        "demo-account"
+      ],
+      "evidenceObservedAt": "2025-02-10T12:00:00Z",
+      "lastSuccessfulSync": "2025-02-10T11:00:00Z",
+      "latestBusinessDate": "2025-01-07",
+      "freshnessHours": 48,
+      "coverage": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "complete",
+        "evidenceRef": "fictional-fixture",
+        "coveredDays": [
+          "2025-01-01",
+          "2025-01-02",
+          "2025-01-03",
+          "2025-01-04",
+          "2025-01-05",
+          "2025-01-06",
+          "2025-01-07"
+        ]
+      },
+      "reconciliation": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "passed",
+        "evidenceRef": "fictional-fixture"
+      }
+    },
+    {
+      "id": "search_console",
+      "label": "Search Console",
+      "group": "Website",
+      "connection": "demo",
+      "identityVerified": true,
+      "accountIds": [
+        "demo-account"
+      ],
+      "evidenceObservedAt": "2025-02-10T12:00:00Z",
+      "lastSuccessfulSync": null,
+      "latestBusinessDate": null,
+      "freshnessHours": 48,
+      "coverage": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "unknown",
+        "evidenceRef": "fictional-fixture",
+        "coveredDays": []
+      },
+      "reconciliation": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "pending",
+        "evidenceRef": "fictional-fixture"
+      }
+    },
+    {
+      "id": "youtube",
+      "label": "YouTube",
+      "group": "Content",
+      "connection": "demo",
+      "identityVerified": true,
+      "accountIds": [
+        "demo-account"
+      ],
+      "evidenceObservedAt": "2025-02-10T12:00:00Z",
+      "lastSuccessfulSync": null,
+      "latestBusinessDate": null,
+      "freshnessHours": 48,
+      "coverage": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "unknown",
+        "evidenceRef": "fictional-fixture",
+        "coveredDays": []
+      },
+      "reconciliation": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "pending",
+        "evidenceRef": "fictional-fixture"
+      }
+    },
+    {
+      "id": "instagram",
+      "label": "Instagram",
+      "group": "Content",
+      "connection": "demo",
+      "identityVerified": true,
+      "accountIds": [
+        "demo-account"
+      ],
+      "evidenceObservedAt": "2025-02-10T12:00:00Z",
+      "lastSuccessfulSync": null,
+      "latestBusinessDate": null,
+      "freshnessHours": 48,
+      "coverage": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "unknown",
+        "evidenceRef": "fictional-fixture",
+        "coveredDays": []
+      },
+      "reconciliation": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "pending",
+        "evidenceRef": "fictional-fixture"
+      }
+    },
+    {
+      "id": "spotify",
+      "label": "Podcast",
+      "group": "Content",
+      "connection": "demo",
+      "identityVerified": true,
+      "accountIds": [
+        "demo-account"
+      ],
+      "evidenceObservedAt": "2025-02-10T12:00:00Z",
+      "lastSuccessfulSync": null,
+      "latestBusinessDate": null,
+      "freshnessHours": 48,
+      "coverage": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "unknown",
+        "evidenceRef": "fictional-fixture",
+        "coveredDays": []
+      },
+      "reconciliation": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "pending",
+        "evidenceRef": "fictional-fixture"
+      }
+    },
+    {
+      "id": "crm",
+      "label": "CRM",
+      "group": "Business",
+      "connection": "demo",
+      "identityVerified": true,
+      "accountIds": [
+        "demo-account"
+      ],
+      "evidenceObservedAt": "2025-02-10T12:00:00Z",
+      "lastSuccessfulSync": "2025-02-10T11:00:00Z",
+      "latestBusinessDate": "2025-01-07",
+      "freshnessHours": 48,
+      "coverage": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "complete",
+        "evidenceRef": "fictional-fixture",
+        "coveredDays": [
+          "2025-01-01",
+          "2025-01-02",
+          "2025-01-03",
+          "2025-01-04",
+          "2025-01-05",
+          "2025-01-06",
+          "2025-01-07"
+        ]
+      },
+      "reconciliation": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "passed",
+        "evidenceRef": "fictional-fixture"
+      }
+    },
+    {
+      "id": "payments",
+      "label": "Payments",
+      "group": "Business",
+      "connection": "demo",
+      "identityVerified": true,
+      "accountIds": [
+        "demo-account"
+      ],
+      "evidenceObservedAt": "2025-02-10T12:00:00Z",
+      "lastSuccessfulSync": "2025-02-10T11:00:00Z",
+      "latestBusinessDate": "2025-01-07",
+      "freshnessHours": 48,
+      "coverage": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "complete",
+        "evidenceRef": "fictional-fixture",
+        "coveredDays": [
+          "2025-01-01",
+          "2025-01-02",
+          "2025-01-03",
+          "2025-01-04",
+          "2025-01-05",
+          "2025-01-06",
+          "2025-01-07"
+        ]
+      },
+      "reconciliation": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "passed",
+        "evidenceRef": "fictional-fixture"
+      }
+    },
+    {
+      "id": "email",
+      "label": "Email",
+      "group": "Messaging",
+      "connection": "demo",
+      "identityVerified": true,
+      "accountIds": [
+        "demo-account"
+      ],
+      "evidenceObservedAt": "2025-02-10T12:00:00Z",
+      "lastSuccessfulSync": null,
+      "latestBusinessDate": null,
+      "freshnessHours": 48,
+      "coverage": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "unknown",
+        "evidenceRef": "fictional-fixture",
+        "coveredDays": []
+      },
+      "reconciliation": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "pending",
+        "evidenceRef": "fictional-fixture"
+      }
+    },
+    {
+      "id": "whatsapp",
+      "label": "WhatsApp",
+      "group": "Messaging",
+      "connection": "demo",
+      "identityVerified": true,
+      "accountIds": [
+        "demo-account"
+      ],
+      "evidenceObservedAt": "2025-02-10T12:00:00Z",
+      "lastSuccessfulSync": null,
+      "latestBusinessDate": null,
+      "freshnessHours": 48,
+      "coverage": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "unknown",
+        "evidenceRef": "fictional-fixture",
+        "coveredDays": []
+      },
+      "reconciliation": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "pending",
+        "evidenceRef": "fictional-fixture"
+      }
+    },
+    {
+      "id": "sms",
+      "label": "SMS",
+      "group": "Messaging",
+      "connection": "demo",
+      "identityVerified": true,
+      "accountIds": [
+        "demo-account"
+      ],
+      "evidenceObservedAt": "2025-02-10T12:00:00Z",
+      "lastSuccessfulSync": null,
+      "latestBusinessDate": null,
+      "freshnessHours": 48,
+      "coverage": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "unknown",
+        "evidenceRef": "fictional-fixture",
+        "coveredDays": []
+      },
+      "reconciliation": {
+        "start": "2025-01-01",
+        "endExclusive": "2025-01-08",
+        "workspaceId": "demo-workspace",
+        "timezone": "Etc/UTC",
+        "currency": "USD",
+        "status": "pending",
+        "evidenceRef": "fictional-fixture"
+      }
+    }
+  ],
+  "businessReview": {
+    "start": "2025-01-01",
+    "endExclusive": "2025-01-08",
+    "workspaceId": "demo-workspace",
+    "timezone": "Etc/UTC",
+    "currency": "USD",
+    "status": "approved",
+    "evidenceRef": "fictional-fixture"
+  },
+  "attribution": {
+    "start": "2025-01-01",
+    "endExclusive": "2025-01-08",
+    "workspaceId": "demo-workspace",
+    "timezone": "Etc/UTC",
+    "currency": "USD",
+    "status": "approved",
+    "evidenceRef": "fictional-fixture"
+  },
+  "cohort": {
+    "closedAt": "2025-02-07T00:00:00Z"
+  },
+  "metricInputs": {
+    "mediaSpend": {
+      "start": "2025-01-01",
+      "endExclusive": "2025-01-08",
+      "workspaceId": "demo-workspace",
+      "timezone": "Etc/UTC",
+      "currency": "USD",
+      "complete": true,
+      "evidenceRef": "fictional-fixture",
+      "records": [
+        {
+          "source": "meta_ads",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "spend-a",
+          "spendMinor": 72000
+        },
+        {
+          "source": "google_ads",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "spend-b",
+          "spendMinor": 48000
+        }
+      ]
+    },
+    "validLeads": {
+      "start": "2025-01-01",
+      "endExclusive": "2025-01-08",
+      "workspaceId": "demo-workspace",
+      "timezone": "Etc/UTC",
+      "currency": "USD",
+      "complete": true,
+      "evidenceRef": "fictional-fixture",
+      "records": [
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-1",
+          "leadId": "demo-enquiry-1"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-2",
+          "leadId": "demo-enquiry-2"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-3",
+          "leadId": "demo-enquiry-3"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-4",
+          "leadId": "demo-enquiry-4"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-5",
+          "leadId": "demo-enquiry-5"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-6",
+          "leadId": "demo-enquiry-6"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-7",
+          "leadId": "demo-enquiry-7"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-8",
+          "leadId": "demo-enquiry-8"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-9",
+          "leadId": "demo-enquiry-9"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-10",
+          "leadId": "demo-enquiry-10"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-11",
+          "leadId": "demo-enquiry-11"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-12",
+          "leadId": "demo-enquiry-12"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-13",
+          "leadId": "demo-enquiry-13"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-14",
+          "leadId": "demo-enquiry-14"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-15",
+          "leadId": "demo-enquiry-15"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-16",
+          "leadId": "demo-enquiry-16"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-17",
+          "leadId": "demo-enquiry-17"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-18",
+          "leadId": "demo-enquiry-18"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-19",
+          "leadId": "demo-enquiry-19"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-20",
+          "leadId": "demo-enquiry-20"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-21",
+          "leadId": "demo-enquiry-21"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-22",
+          "leadId": "demo-enquiry-22"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-23",
+          "leadId": "demo-enquiry-23"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-24",
+          "leadId": "demo-enquiry-24"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-25",
+          "leadId": "demo-enquiry-25"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-26",
+          "leadId": "demo-enquiry-26"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-27",
+          "leadId": "demo-enquiry-27"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-28",
+          "leadId": "demo-enquiry-28"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-29",
+          "leadId": "demo-enquiry-29"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-30",
+          "leadId": "demo-enquiry-30"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-31",
+          "leadId": "demo-enquiry-31"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-32",
+          "leadId": "demo-enquiry-32"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-33",
+          "leadId": "demo-enquiry-33"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-34",
+          "leadId": "demo-enquiry-34"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-35",
+          "leadId": "demo-enquiry-35"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-36",
+          "leadId": "demo-enquiry-36"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-37",
+          "leadId": "demo-enquiry-37"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-38",
+          "leadId": "demo-enquiry-38"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-39",
+          "leadId": "demo-enquiry-39"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "enquiry-40",
+          "leadId": "demo-enquiry-40"
+        }
+      ]
+    },
+    "confirmedSales": {
+      "start": "2025-01-01",
+      "endExclusive": "2025-01-08",
+      "workspaceId": "demo-workspace",
+      "timezone": "Etc/UTC",
+      "currency": "USD",
+      "complete": true,
+      "evidenceRef": "fictional-fixture",
+      "records": [
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "sale-1",
+          "saleId": "demo-sale-1"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "sale-2",
+          "saleId": "demo-sale-2"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "sale-3",
+          "saleId": "demo-sale-3"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "sale-4",
+          "saleId": "demo-sale-4"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "sale-5",
+          "saleId": "demo-sale-5"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "sale-6",
+          "saleId": "demo-sale-6"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "sale-7",
+          "saleId": "demo-sale-7"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "sale-8",
+          "saleId": "demo-sale-8"
+        }
+      ]
+    },
+    "netCollected": {
+      "start": "2025-01-01",
+      "endExclusive": "2025-01-08",
+      "workspaceId": "demo-workspace",
+      "timezone": "Etc/UTC",
+      "currency": "USD",
+      "complete": true,
+      "evidenceRef": "fictional-fixture",
+      "records": [
+        {
+          "source": "payments",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "cash-demo",
+          "capturedMinor": 650000,
+          "refundMinor": 20000,
+          "chargebackMinor": 0
+        }
+      ]
+    },
+    "paidLeads": {
+      "start": "2025-01-01",
+      "endExclusive": "2025-01-08",
+      "workspaceId": "demo-workspace",
+      "timezone": "Etc/UTC",
+      "currency": "USD",
+      "complete": true,
+      "evidenceRef": "fictional-fixture",
+      "records": [
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-1",
+          "leadId": "demo-paid-1"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-2",
+          "leadId": "demo-paid-2"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-3",
+          "leadId": "demo-paid-3"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-4",
+          "leadId": "demo-paid-4"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-5",
+          "leadId": "demo-paid-5"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-6",
+          "leadId": "demo-paid-6"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-7",
+          "leadId": "demo-paid-7"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-8",
+          "leadId": "demo-paid-8"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-9",
+          "leadId": "demo-paid-9"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-10",
+          "leadId": "demo-paid-10"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-11",
+          "leadId": "demo-paid-11"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-12",
+          "leadId": "demo-paid-12"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-13",
+          "leadId": "demo-paid-13"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-14",
+          "leadId": "demo-paid-14"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-15",
+          "leadId": "demo-paid-15"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-16",
+          "leadId": "demo-paid-16"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-17",
+          "leadId": "demo-paid-17"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-18",
+          "leadId": "demo-paid-18"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-19",
+          "leadId": "demo-paid-19"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-20",
+          "leadId": "demo-paid-20"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-21",
+          "leadId": "demo-paid-21"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-22",
+          "leadId": "demo-paid-22"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-23",
+          "leadId": "demo-paid-23"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "paid-24",
+          "leadId": "demo-paid-24"
+        }
+      ]
+    },
+    "newCustomers": {
+      "start": "2025-01-01",
+      "endExclusive": "2025-01-08",
+      "workspaceId": "demo-workspace",
+      "timezone": "Etc/UTC",
+      "currency": "USD",
+      "complete": true,
+      "evidenceRef": "fictional-fixture",
+      "records": [
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "customer-1",
+          "customerId": "demo-customer-1"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "customer-2",
+          "customerId": "demo-customer-2"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "customer-3",
+          "customerId": "demo-customer-3"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "customer-4",
+          "customerId": "demo-customer-4"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "customer-5",
+          "customerId": "demo-customer-5"
+        },
+        {
+          "source": "crm",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "customer-6",
+          "customerId": "demo-customer-6"
+        }
+      ]
+    },
+    "paidCohortCash": {
+      "start": "2025-01-01",
+      "endExclusive": "2025-01-08",
+      "workspaceId": "demo-workspace",
+      "timezone": "Etc/UTC",
+      "currency": "USD",
+      "complete": true,
+      "evidenceRef": "fictional-fixture",
+      "records": [
+        {
+          "source": "payments",
+          "accountId": "demo-account",
+          "date": "2025-01-04",
+          "key": "cohort-demo",
+          "cohortNetCashMinor": 420000
+        }
+      ]
+    }
+  }
+}
