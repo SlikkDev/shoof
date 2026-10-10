@@ -25,7 +25,7 @@ export function sessionToken(header, name = cookieName) {
 }
 function responseValid(response) {
   if (!response || JSON.stringify(response).length > 24576 || !bytesValid(response.id) || response.id !== response.rawId || response.type !== 'public-key' || !bytesValid(response.response?.clientDataJSON, 8192)) return false;
-  try { const client = JSON.parse(Buffer.from(response.response.clientDataJSON, 'base64url')); return client.crossOrigin !== true && client.topOrigin === undefined; } catch { return false; }
+  try { const client = JSON.parse(Buffer.from(response.response.clientDataJSON, 'base64url')); return (client.crossOrigin === undefined || client.crossOrigin === false) && client.topOrigin === undefined; } catch { return false; }
 }
 
 export async function createAuth({tenant, directory, ownerEmail, publicHost}, {clock = Date.now} = {}) {

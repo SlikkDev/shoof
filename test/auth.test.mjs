@@ -45,7 +45,7 @@ test('passkey registration and login verify real signatures, user handle, counte
   const fresh=await auth.options('authenticate',browser);assert.equal((await auth.verify('authenticate',fresh.ceremonyId,key.authentication(fresh.options,userId,{counter:2}),browser)).status,'accepted');
 });
 
-for(const [name,change] of Object.entries({origin:{origin:'https://evil.example.invalid'},rp:{rpID:'evil.example.invalid'},uv:{flags:1},challenge:{challenge:newToken()},crossOrigin:{crossOrigin:true}}))test(`passkey ${name} mismatch is denied and consumes the bound challenge`,async t=>{
+for(const [name,change] of Object.entries({origin:{origin:'https://evil.example.invalid'},rp:{rpID:'evil.example.invalid'},uv:{flags:1},challenge:{challenge:newToken()},crossOrigin:{crossOrigin:true},crossOriginType:{crossOrigin:'false'}}))test(`passkey ${name} mismatch is denied and consumes the bound challenge`,async t=>{
   const f=await fixture();t.after(f.cleanup);const auth=await createAuth(f.config),token=await signIn(auth,f),browser=newToken(),key=fakeAuthenticator();
   const reg=await auth.options('register',browser,token);assert.equal((await auth.verify('register',reg.ceremonyId,key.registration(reg.options,change),browser,token)).status,'denied');
   assert.equal((await auth.verify('register',reg.ceremonyId,key.registration(reg.options),browser,token)).status,'denied');
