@@ -69,6 +69,7 @@ export async function runSyncTick({enabled = false, job: input, store, transport
   if (enabled !== true) return {status: 'disabled'};
   const job = projectJob(input), now = timestamp(clock());
   if (typeof currentTenantId !== 'function' || currentTenantId() !== job.scope.tenantId || typeof transport !== 'function') throw new Error('Authorized read context required');
+  const sameTenant = () => currentTenantId() === job.scope.tenantId;
   return store.withLock(job.scope, async transaction => {
     const state = projectState(await transaction.read(), job);
     if (currentTenantId() !== job.scope.tenantId) throw new Error('Tenant changed');
@@ -80,6 +81,7 @@ export async function runSyncTick({enabled = false, job: input, store, transport
     let observation = state.observation, succeeded = false;
     try {
       const result = await collectObservations({transport, currentTenantId, context: job.context, maxPages: job.maxPages, maxRows: job.maxRows});
+      if (!sameTenant()) throw new Error('Tenant changed');
       observation = {context: job.context, rows: result.rows, paginationExhausted: true, coverage: 'unverified', reconciliation: 'pending'};
       succeeded = true;
     } catch { /* Raw provider errors can contain secrets; never persist or return them. */ }
@@ -92,8 +94,13 @@ export async function runSyncTick({enabled = false, job: input, store, transport
       observation: succeeded ? {...observation, collectedAt: finishedAt} : observation
     };
     // Re-project at the persistence boundary; no provider payload or injected extras survive.
-    await transaction.write(projectState(finished, job));
-    if (currentTenantId() !== job.scope.tenantId) throw new Error('Tenant changed');
+    const committed = await transaction.write(projectState(finished, job), {shouldCommit: succeeded ? sameTenant : () => true});
+    if (committed === false) {
+      finished.lastAttempt = {...finished.lastAttempt, status: 'failed', errorCode: 'read-failed'};
+      finished.observation = state.observation;
+      await transaction.write(projectState(finished, job));
+    }
+    if (!sameTenant()) throw new Error('Tenant changed');
     return {status: finished.lastAttempt.status, health: health(finished, job, finishedAt)};
   });
 }

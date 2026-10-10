@@ -87,6 +87,38 @@ test('tenant and account scope changes cannot reuse or expose another observatio
   await assert.rejects(runSyncTick({...f.args, currentTenantId: () => tenant, transport: async () => {tenant = 'another-demo'; return page();}}), /Tenant changed/);
   assert.equal((await f.state()).lastAttempt.status, 'failed');
 });
+test('a tenant switch between collection completion and the tick continuation preserves the last success', async t => {
+  const f = await fixture(t); await runSyncTick(f.args);
+  const baseline = (await f.state()).observation;
+  f.setTime('2025-01-04T02:00:00.000Z'); let tenant = context.tenantId;
+  await assert.rejects(runSyncTick({...f.args, currentTenantId: () => tenant, transport: async () => {
+    queueMicrotask(() => queueMicrotask(() => { tenant = 'another-demo'; }));
+    return page([{...row(), values: {sessions: 999}}]);
+  }}), /Tenant changed/);
+  const state = await f.state();
+  assert.equal(state.lastAttempt.status, 'failed');
+  assert.deepEqual(state.observation, baseline);
+  tenant = context.tenantId;
+  const result = await inspectSyncState({...f.args, currentTenantId: () => tenant});
+  assert.equal(result.health.lastSuccessAt, baseline.collectedAt);
+  assert.equal(result.health.readFreshness, 'stale');
+});
+test('a tenant switch while preparing a state write cannot commit the new observation', async t => {
+  const f = await fixture(t); await runSyncTick(f.args);
+  const baseline = (await f.state()).observation;
+  f.setTime('2025-01-04T02:00:00.000Z'); let tenant = context.tenantId;
+  const store = {withLock: (scope, callback) => f.store.withLock(scope, transaction => callback({
+    read: transaction.read,
+    write: (value, options) => {
+      if (value.lastAttempt.status === 'success') queueMicrotask(() => { tenant = 'another-demo'; });
+      return transaction.write(value, options);
+    }
+  }))};
+  await assert.rejects(runSyncTick({...f.args, store, currentTenantId: () => tenant, transport: async () => page([{...row(), values: {sessions: 999}}])}), /Tenant changed/);
+  const state = await f.state();
+  assert.equal(state.lastAttempt.status, 'failed'); assert.deepEqual(state.observation, baseline);
+  assert.deepEqual((await readdir(f.directory)).map(name => name.slice(-5)), ['.json']);
+});
 test('page and row budgets reject whole batches, retaining no partial observations', async t => {
   const f = await fixture(t);
   const rows = [row('one'), row('two'), row('three')];

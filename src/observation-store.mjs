@@ -38,7 +38,9 @@ export async function createObservationStore(directory) {
       throw new Error('Cannot read private sync state');
     } finally { await handle?.close(); }
   }
-  async function write(file, value) {
+  async function write(file, value, {shouldCommit = () => true} = {}) {
+    if (typeof shouldCommit !== 'function') throw new Error('Synchronous commit guard required');
+    if (shouldCommit() !== true) return false;
     const bytes = JSON.stringify(value) + '\n';
     if (Buffer.byteLength(bytes) > maxBytes) throw new Error('Private state exceeds size limit');
     const temp = file + '.' + randomUUID() + '.tmp';
@@ -48,7 +50,11 @@ export async function createObservationStore(directory) {
       await handle.writeFile(bytes);
       await handle.sync();
       await handle.close(); handle = null;
+      // Recheck after asynchronous preparation, immediately before dispatching
+      // the atomic replacement. A rejected candidate leaves the old file intact.
+      if (shouldCommit() !== true) return false;
       await rename(temp, file);
+      return true;
     } finally {
       await handle?.close();
       await unlink(temp).catch(error => { if (error.code !== 'ENOENT') throw error; });
@@ -59,7 +65,7 @@ export async function createObservationStore(directory) {
       const base = filename(scope), lock = base + '.lock', file = base + '.json';
       try { await mkdir(lock, {mode: 0o700}); }
       catch (error) { if (error.code === 'EEXIST') return {status: 'busy'}; throw new Error('Cannot lock private sync state'); }
-      try { return await callback({read: () => read(file), write: value => write(file, value)}); }
+      try { return await callback({read: () => read(file), write: (value, options) => write(file, value, options)}); }
       finally { await rmdir(lock); }
     }
   });
