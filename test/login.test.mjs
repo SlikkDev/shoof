@@ -88,14 +88,14 @@ for (const failure of ['rejected link', 'interrupted connection']) {
   });
 }
 
-for (const outcome of ['success', 'failure', 'interruption']) {
+for (const outcome of ['failure', 'interruption']) {
   test(`a superseded confirmation ${outcome} cannot change the replacement link UI`, async () => {
     const p = page('#token=fictional-old');
     const first = p.confirm.fire('click');
     p.openLink('fictional-replacement');
     assertConfirmation(p);
     if (outcome === 'interruption') p.calls[0].reject(new Error('Fictional connection failure'));
-    else p.calls[0].resolve({ok: outcome === 'success'});
+    else p.calls[0].resolve({ok: false});
     await first;
     assertConfirmation(p);
     const second = p.confirm.fire('click');
@@ -104,6 +104,19 @@ for (const outcome of ['success', 'failure', 'interruption']) {
     assert.deepEqual(p.navigations, ['/']);
   });
 }
+
+test('a successful older confirmation completes sign-in after a replacement link arrives', async () => {
+  const p = page('#token=fictional-old');
+  const first = p.confirm.fire('click');
+  p.openLink('fictional-replacement');
+  assertConfirmation(p);
+  p.calls[0].resolve({ok: true}); await first;
+  assert.deepEqual(p.navigations, ['/']);
+  assert.equal(p.message.textContent, '');
+  // While navigation is pending, do not try to consume B with a cleared flow.
+  await p.confirm.fire('click');
+  assert.equal(p.calls.length, 1);
+});
 
 test('a delayed email-request response cannot overwrite a new link confirmation', async () => {
   const p = page();

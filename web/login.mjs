@@ -23,7 +23,14 @@ confirm.addEventListener('click', async () => {
   if (!magic || confirm.disabled) return;
   const version = linkVersion, token = magic;
   confirm.disabled = true;
-  try { const r = await post('/api/magic/confirm', {token}); if (version !== linkVersion) return; magic = null; if (!r.ok) throw new Error(); location.replace('/'); }
+  try {
+    const r = await post('/api/magic/confirm', {token});
+    // A successful response has already applied its session/flow cookies, even
+    // when another link arrived meanwhile. Complete that authenticated sign-in.
+    if (r.ok) { magic = null; location.replace('/'); return; }
+    if (version !== linkVersion) return;
+    throw new Error();
+  }
   catch { if (version !== linkVersion) return; magic = null; message.textContent = 'This link could not be used. Request a new link here, then open it in this browser.'; form.hidden = false; confirmation.hidden = true; }
   finally { if (version === linkVersion) confirm.disabled = false; }
 });
