@@ -61,6 +61,9 @@ export async function createObservationStore(directory) {
     }
   }
   return Object.freeze({
+    // Atomic replacement lets readers see a complete old/new snapshot without
+    // taking the writer lock (important for parallel authenticated asset reads).
+    read: scope => read(filename(scope) + '.json'),
     async withLock(scope, callback) {
       const base = filename(scope), lock = base + '.lock', file = base + '.json';
       try { await mkdir(lock, {mode: 0o700}); }

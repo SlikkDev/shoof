@@ -125,8 +125,8 @@ test('concurrent readers see a complete old/new report or busy, never a partial 
 
 test('private files and runtime config reject public modes, missing auth, symlinks and broad permissions', async t => {
   const f = await fixture(); t.after(f.cleanup);
-  assert.equal((await loadRuntimeConfig(f.env)).access.publicHost, f.access.publicHost);
-  await assert.rejects(loadRuntimeConfig({...f.env, REPORTING_ACCESS_AUDIENCE: ''}));
+  assert.equal((await loadRuntimeConfig(f.env)).publicHost, f.publicHost);
+  await assert.rejects(loadRuntimeConfig({...f.env, REPORTING_PUBLIC_HOST: ''}));
   await assert.rejects(readPrivateJson(new URL('../examples/tenant.demo.json', import.meta.url).pathname));
   const link = join(f.directory, 'linked.json'); await symlink(f.tenantFile, link);
   await assert.rejects(readPrivateJson(link));

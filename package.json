@@ -17,9 +17,12 @@
     "start": "node tools/runtime.mjs",
     "import:report": "node tools/import-report.mjs",
     "qa:runtime": "node tools/qa-runtime.mjs",
-    "check:container": "node tools/container-check.mjs"
+    "check:container": "node tools/container-check.mjs",
+    "auth:setup": "node tools/auth-setup.mjs"
   },
   "dependencies": {
-    "jose": "6.2.12"
+    "@node-rs/argon2": "2.2.2",
+    "cookie": "2.0.1",
+    "read": "4.1.0"
   }
 }

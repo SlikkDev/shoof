@@ -11,15 +11,17 @@ npm run privacy
 npm run preview
 ```
 
-Requires Node 22 or newer. The protected runtime uses the pinned `jose` dependency for JWT verification. The preview binds only to `127.0.0.1:4327`. The build produces a static fictional demo under `dist/`; it refuses private runtime input variables. These review paths remain separate from the authenticated runtime.
+Requires Node 22 or newer. The protected runtime uses pinned Argon2id, cookie and hidden-input libraries. The preview binds only to `127.0.0.1:4327`. The build produces a static fictional demo under `dist/`; it refuses private runtime input variables. These review paths remain separate from the authenticated runtime.
 
 ## Protected runtime
 
-`npm start` serves a single externally configured tenant behind an existing Cloudflare Access application, validates signed assertions at the origin, and reads an owner-only persistent store. Startup requires explicit Access issuer/audience, viewer allowlist, hostname, tenant file and state directory. There is no default login, credential creation, HTTP write endpoint or source connection.
+`npm start` serves one externally configured tenant with a built-in owner email/password login and durable private storage. It requires the HTTPS hostname, external tenant file and owner-only state directory. There is no public signup, default password, email service or identity-provider enrollment.
 
-`npm run import:report` validates external snapshot/observation files and atomically publishes their projected presentation to that store. Invalid or older candidates preserve the last accepted report. Freshness uses evidence timestamps, not file-save times. `npm run qa:runtime` opens a separate loopback-only fictional review server with an ephemeral test identity; it is excluded from the production image.
+After explicit owner approval, `npm run auth:setup` prompts in a private terminal for the owner's email and password (hidden, with confirmation). It stores only an Argon2id password hash. `npm run auth:setup -- --reset` is the deliberate recovery path and revokes all sessions. Native login uses secure host-only cookies, server-side eight-hour sessions, immediate sign-out revocation, CSRF protection and persistent login throttling.
 
-See [protected runtime setup](docs/RUNTIME.md) for configuration, storage, observation format, verification and rollback. Deployment and identity-provider setup are operator actions; publishing this source performs neither.
+`npm run import:report` validates external snapshot/observation files and atomically publishes their projected presentation. Invalid or older candidates preserve the last accepted report. Freshness uses evidence timestamps, not save times. Authentication never releases metric gates or starts a marketing source connection.
+
+See [runtime setup](docs/RUNTIME.md) for the small bootstrap flow, session/rate-limit tradeoffs, private storage, deployment verification and rollback. `npm run qa:runtime` starts a loopback-only fictional account for native-login browser QA; it is excluded from the production image. Publishing source creates no real account or deployment.
 
 The engine keeps missing data unavailable, requires matching tenant/account/date/currency/timezone scope and reconciliation evidence, rejects duplicate records and computes ratios from additive totals. Source run metadata never establishes business coverage. The example metric definitions are proposed business rules, including a 30-day cohort and VAT-inclusive cash; they require review before real reporting.
 
