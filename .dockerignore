@@ -9,4 +9,3 @@
 !tools/
 !tools/runtime.mjs
 !tools/import-report.mjs
-!tools/auth-setup.mjs
