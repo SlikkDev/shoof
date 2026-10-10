@@ -24,16 +24,21 @@ export function normalizeObservationPage(page,context) {
   });
   return {rows,nextCursor:page.nextCursor};
 }
-export async function collectObservations({transport,currentTenantId,context,maxPages=100}) {
+export function projectReadContext(context) {
   validateContext(context);
-  if (typeof transport!=='function'||typeof currentTenantId!=='function'||!Number.isInteger(maxPages)||maxPages<1||maxPages>1000) throw new Error('Bounded existing read transport required');
-  const fixed={tenantId:context.tenantId,sourceId:context.sourceId,accountIds:[...context.accountIds],metricKeys:[...context.metricKeys],timezone:context.timezone,period:{start:context.period.start,endExclusive:context.period.endExclusive}},rows=[],cursors=new Set(),keys=new Set();let cursor=null;
+  return {tenantId:context.tenantId,sourceId:context.sourceId,accountIds:[...context.accountIds],metricKeys:[...context.metricKeys],timezone:context.timezone,period:{start:context.period.start,endExclusive:context.period.endExclusive}};
+}
+export async function collectObservations({transport,currentTenantId,context,maxPages=100,maxRows=10000}) {
+  const fixed=projectReadContext(context);
+  if (typeof transport!=='function'||typeof currentTenantId!=='function'||!Number.isInteger(maxPages)||maxPages<1||maxPages>1000||!Number.isInteger(maxRows)||maxRows<1||maxRows>100000) throw new Error('Bounded existing read transport required');
+  const rows=[],cursors=new Set(),keys=new Set();let cursor=null;
   for (let index=0;index<maxPages;index++) {
     if (currentTenantId()!==fixed.tenantId) throw new Error('Tenant changed');
     const request=Object.freeze({...structuredClone(fixed),cursor,kind:'read-observations'});
     const raw=await transport(request);
     if (currentTenantId()!==fixed.tenantId) throw new Error('Tenant changed');
     const page=normalizeObservationPage(raw,fixed);
+    if (rows.length+page.rows.length>maxRows) throw new Error('Row limit reached; completeness unknown');
     for (const row of page.rows) {
       const key=`${row.accountId}:${row.key}`;
       if (keys.has(key)) throw new Error('Duplicate source identity');
