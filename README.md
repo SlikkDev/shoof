@@ -1,4 +1,4 @@
-# Marketing reporting
+# Shoof
 
 A reusable local dashboard and metric engine with four views: results, funnel, channels and data health. The included **Harbor & Pine** tenant and every displayed value are fictional examples. No live connector, credential, customer export, hosted deployment or scheduler is included.
 
@@ -33,10 +33,10 @@ The presentation response excludes workspace/account identities, evidence URLs, 
 - `src/manual-import.mjs`: dated JSON aggregate import with source units and a content hash. Parsing and exhausted pagination do not establish coverage or reconciliation.
 - `docs/INTEGRATION.md`: automated/manual source sequence and evidence gates.
 - `docs/DATA-BOUNDARIES.md`: nonsecret tenant configuration, private observations and secrets.
-- `docs/RELEASE-REVIEW.md`: local review status and publication requirements.
+- `docs/RELEASE-REVIEW.md`: source review and licensing notes.
 
 Browser QA can reuse an existing external Playwright installation without installing packages in this project. Set `REPORTING_QA_PACKAGE` to its absolute package.json path and `REPORTING_QA_BROWSER` to an installed Chromium executable, then run `npm run qa`. QA starts a temporary loopback demo server and writes fictional screenshots/PDF to ignored `artifacts/`. No machine-specific paths are committed.
 
 ## Publication and licensing
 
-This is a local source candidate, not a published open-source release. `private: true` prevents npm publishing; it does not determine Git hosting visibility. `license: "UNLICENSED"` grants no reuse license and makes no ownership claim. The owner must choose licensing and explicitly approve the repository audience before publication.
+Shoof's generic source is published for review. An open-source license has not been selected. `private: true` prevents npm publishing; it does not determine Git hosting visibility. `license: "UNLICENSED"` grants no reuse license and makes no ownership claim. Licensing remains undecided. This repository does not publish a hosted dashboard or any private tenant data.
