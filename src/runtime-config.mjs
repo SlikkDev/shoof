@@ -24,11 +24,18 @@ export function validatePublicHost(publicHost) {
   return publicHost;
 }
 
+export function validateOwnerEmail(value) {
+  if (typeof value !== 'string' || value.length > 254 || !/^[^\s@,<>]+@[^\s@,<>]+\.[^\s@,<>]+$/.test(value)) throw new Error('Explicit owner email required');
+  return value.toLowerCase();
+}
+
 export async function loadRuntimeConfig(env = process.env) {
   const publicHost = validatePublicHost(env.REPORTING_PUBLIC_HOST);
   const tenant = validateTenant(await readPrivateJson(env.REPORTING_TENANT_FILE));
   if (tenant.mode !== 'private') throw new Error('Private runtime tenant required');
   const port = Number(env.REPORTING_PORT ?? 8080), host = env.REPORTING_BIND ?? '127.0.0.1';
   if (!Number.isInteger(port) || port < 0 || port > 65535 || !['127.0.0.1', '0.0.0.0'].includes(host)) throw new Error('Invalid listen configuration');
-  return Object.freeze({publicHost, tenant, host, port, directory: env.REPORTING_STATE_DIR});
+  const ownerEmail = validateOwnerEmail(env.REPORTING_OWNER_EMAIL);
+  const smtp = await readPrivateJson(env.REPORTING_SMTP_FILE);
+  return Object.freeze({publicHost, tenant, ownerEmail, smtp, host, port, directory: env.REPORTING_STATE_DIR});
 }

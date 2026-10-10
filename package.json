@@ -17,12 +17,12 @@
     "start": "node tools/runtime.mjs",
     "import:report": "node tools/import-report.mjs",
     "qa:runtime": "node tools/qa-runtime.mjs",
-    "check:container": "node tools/container-check.mjs",
-    "auth:setup": "node tools/auth-setup.mjs"
+    "check:container": "node tools/container-check.mjs"
   },
   "dependencies": {
-    "@node-rs/argon2": "2.2.2",
+    "@simplewebauthn/browser": "14.0.0",
+    "@simplewebauthn/server": "14.0.3",
     "cookie": "2.0.1",
-    "read": "4.1.0"
+    "nodemailer": "10.1.0"
   }
 }

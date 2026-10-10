@@ -11,17 +11,17 @@ npm run privacy
 npm run preview
 ```
 
-Requires Node 22 or newer. The protected runtime uses pinned Argon2id, cookie and hidden-input libraries. The preview binds only to `127.0.0.1:4327`. The build produces a static fictional demo under `dist/`; it refuses private runtime input variables. These review paths remain separate from the authenticated runtime.
+Requires Node 22 or newer. Passwordless authentication uses pinned SimpleWebAuthn, Nodemailer and cookie libraries. The local preview binds only to `127.0.0.1:4327`. The static build is always fictional and refuses all private runtime variables.
 
 ## Protected runtime
 
-`npm start` serves one externally configured tenant with a built-in owner email/password login and durable private storage. It requires the HTTPS hostname, external tenant file and owner-only state directory. There is no public signup, default password, email service or identity-provider enrollment.
+`npm start` serves one externally allowlisted owner using **magic links and passkeys**. Configure the existing HTTPS hostname, owner email, private tenant/state paths and an approved generic SMTP sender. There is no Shoof password, public registration, default account or external identity-provider enrollment.
 
-After explicit owner approval, `npm run auth:setup` prompts in a private terminal for the owner's email and password (hidden, with confirmation). It stores only an Argon2id password hash. `npm run auth:setup -- --reset` is the deliberate recovery path and revokes all sessions. Native login uses secure host-only cookies, server-side eight-hour sessions, immediate sign-out revocation, CSRF protection and persistent login throttling.
+Email links expire after ten minutes and require an explicit confirmation in the browser that requested them. Tokens are single use and stored only as hashes. After signing in, the owner can add or remove a passkey from the Passkeys page; changes require recent authentication. Server sessions expire after eight hours, survive restart and revoke on sign-out. CSRF controls and durable rate limits protect the authentication endpoints.
 
-`npm run import:report` validates external snapshot/observation files and atomically publishes their projected presentation. Invalid or older candidates preserve the last accepted report. Freshness uses evidence timestamps, not save times. Authentication never releases metric gates or starts a marketing source connection.
+`npm run import:report` validates external snapshot/observation files and atomically publishes projected fields. Invalid or older candidates preserve the accepted report. Signing in neither releases metric gates nor starts a marketing connection.
 
-See [runtime setup](docs/RUNTIME.md) for the small bootstrap flow, session/rate-limit tradeoffs, private storage, deployment verification and rollback. `npm run qa:runtime` starts a loopback-only fictional account for native-login browser QA; it is excluded from the production image. Publishing source creates no real account or deployment.
+See [runtime setup](docs/RUNTIME.md) for generic SMTP configuration, recovery and cutover. `npm run qa:runtime` provides a fictional loopback login and captured local inbox, with no real email or device credential. Source publication performs no actual credential setup, registration, deployment or private-data upload.
 
 The engine keeps missing data unavailable, requires matching tenant/account/date/currency/timezone scope and reconciliation evidence, rejects duplicate records and computes ratios from additive totals. Source run metadata never establishes business coverage. The example metric definitions are proposed business rules, including a 30-day cohort and VAT-inclusive cash; they require review before real reporting.
 

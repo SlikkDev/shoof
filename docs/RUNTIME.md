@@ -1,97 +1,58 @@
 # Protected reporting runtime
 
-Shoof has a built-in email/password login for one owner. There is no public signup, email delivery, social login or external identity-provider setup. The single-tenant reporting runtime, private imports and persistent presentation store remain separate from the fictional static demo. No source-reader credential or automatic marketing connection is created by signing in.
+Shoof uses magic links and passkeys for one externally allowlisted owner. There is no password login, public registration, hosted identity provider or default account. Authenticated reporting and local imports reuse the private atomic store; signing in does not connect a marketing source or release a metric gate.
 
-## One-time owner setup
+## Setup
 
-Provide these runtime variables through the existing private host configuration:
+Use the existing HTTPS proxy and configure these runtime values privately:
 
-| Name | Purpose |
+| Name | Value |
 | --- | --- |
-| `REPORTING_PUBLIC_HOST` | Exact lowercase HTTPS hostname, with no scheme, path or port |
+| `REPORTING_PUBLIC_HOST` | Exact lowercase HTTPS hostname, without scheme, path or port |
+| `REPORTING_OWNER_EMAIL` | The one approved owner's email; never taken from a browser registration |
 | `REPORTING_TENANT_FILE` | Absolute external owner-only tenant JSON, mode `private` |
-| `REPORTING_STATE_DIR` | Existing external owner-only directory for authentication and report state |
+| `REPORTING_STATE_DIR` | Existing external owner-only directory for sessions, passkeys and report state |
+| `REPORTING_SMTP_FILE` | Absolute external owner-only JSON for an explicitly approved generic SMTP sender |
 
-`REPORTING_PORT` defaults to 8080 and `REPORTING_BIND` to loopback. The container binds `0.0.0.0` internally. Keep the existing HTTPS reverse proxy and publish no application host port. HTTPS is required; the application trusts neither forwarded host/IP/identity headers nor old Access assertions. The former Access issuer/audience/viewer settings are no longer used.
+The SMTP file has `host`, integer `port`, boolean `secure`, and a plain sender email `from`. Set `secure: true` for implicit TLS (typically 465), or `false` for required STARTTLS (typically 587). Optional `user` and `password` must be supplied together for an authenticated relay. These are SMTP service credentials, never a Shoof login password. TLS certificate verification is always enabled; plaintext fallback, arbitrary transport overrides, file/URL content loading and SMTP debug logging are disabled. Connection/greeting timeouts are five seconds and the socket timeout ten seconds. Sender/domain deliverability must be verified with the chosen relay. Do not reuse another application's SMTP credentials without specific approval.
 
-After the owner approves account creation, run this **in a private interactive terminal** with the runtime environment and state volume mounted:
+Keep secrets out of Git, image layers, build variables, chat and URLs. Files must be outside the repository, owned by the runtime UID, mode 0600; the state directory is mode 0700. Docker runs as `node` (UID 1000), supports a read-only root filesystem, and needs only its private state mount writable. All storage ancestors must be operator-controlled. `REPORTING_PORT` defaults to 8080 and `REPORTING_BIND` to loopback; the image binds internally to `0.0.0.0`. Publish no application host port. The reverse proxy supplies HTTPS and redirects HTTP; forwarded identity/host/IP values are never trusted.
 
-```sh
-npm run auth:setup
-```
-
-The owner enters an email and a password twice; password entry is hidden. Use 15–128 characters (at most 512 UTF-8 bytes), preferably a unique password-manager passphrase. Passwords are not accepted in arguments, environment variables or piped input. Do not send them in chat or put them in Git. Existing accounts cannot be overwritten by this command. With no owner set up, sign-in is unavailable; the browser cannot create the account. No mail service or email verification is implied: the operator establishes the owner's identity.
-
-Forgotten password, suspected session theft, or a deliberate owner-email change uses the same private operator path:
-
-```sh
-npm run auth:setup -- --reset
-```
-
-This requires typing `RESET`, a new email/password, and confirmation. It revokes every session and clears the login-attempt budget. Never run it without the owner's authorization. There is no password-reset email, browser account-management endpoint, second account or role hierarchy.
+After setup, the owner requests a link at `/login`, opens it in that same browser and chooses Continue. Then `/security` can add a passkey. The owner handles their real email and device prompts; the agent must not register a real passkey or create credentials. No terminal password bootstrap exists. If no sender is available yet, prepare approved SMTP configuration before deployment; creating an account with an external email service is not part of this source change.
 
 ## Authentication boundaries
 
-- The pinned `@node-rs/argon2` library hashes passwords with Argon2id, 19 MiB memory, two iterations, parallelism one, a random 16-byte salt and 32-byte output. Stored hash parameters are validated before verification; corrupt state cannot select an unbounded hash cost. The pinned `cookie` package handles serialization/parsing, and `read` provides hidden terminal input. No custom password hashing is implemented.
-- Each login creates a fresh opaque 256-bit random session. Only its SHA-256 digest is persisted. The `__Host-shoof` cookie is host-only, `Secure`, `HttpOnly`, `SameSite=Strict`, `Path=/`, with an absolute eight-hour expiry. It is never put in localStorage, URLs, logs or report responses. Login replaces the current browser session; at most ten sessions remain, evicting the oldest when full.
-- Every private request checks current server-side state. Sign-out revokes that session; an operator password reset revokes all sessions immediately for subsequent authorization checks, without a process restart. Sessions and revocations survive restarts through the private mounted store. Already-authorized in-flight reads may finish. Rolling back an authentication backup can restore old credentials/sessions; reset the owner after restoring storage and before serving traffic.
-- Login and logout accept only POST JSON with the fixed AJAX header `X-Shoof-Request: 1` and exact configured HTTPS `Origin`. Cross-site/same-site Fetch Metadata values are rejected; CORS is never enabled. This implements the [OWASP custom-header CSRF pattern](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#employing-custom-request-headers-for-ajaxapi), with Origin and cookie defenses as well. No GET changes authentication state. Do not add cross-origin callers or HTML-form fallbacks without revisiting this boundary.
-- All usernames share a durable limit of ten password checks per fifteen minutes. A changed username, IP header or process restart cannot reset it. Successful attempts also consume the budget. Existing sessions remain usable while login is limited. This deliberately simple single-owner policy can let an attacker delay new sign-ins; the budget recovers automatically and authorized terminal reset is available. No distributed/per-IP limiter or trusted-proxy setup is required.
-- One login body/hash runs at a time per process; the existing store lock also serializes hashes across processes. Parallel attempts receive a retry response. Bodies are capped at 2 KiB, passwords at 512 UTF-8 bytes, and login processing has a five-second connection deadline. HTTP headers and connections are bounded. No password, raw token or user-supplied error is logged.
+- The exact configured HTTPS hostname determines all emailed links, WebAuthn origin and RP ID. The HTTP Host must also match; it never constructs a link or changes the relying party. Changing owner/host/tenant configuration causes existing incompatible state to fail closed. No old password-state migration is provided because no real password accounts were initialized.
+- Magic links use random 256-bit tokens, store only SHA-256 digests, expire after ten minutes and are consumed atomically once. They are bound to a separate secure HTTP-only browser cookie. A wrong browser cannot consume the link. Opening email on a different device requires requesting a new link there; passkeys provide the direct device sign-in path.
+- Tokens travel in the URL fragment, which is not sent to the server/access log. Login JavaScript immediately removes it from history and holds it only in memory. Loading a link never redeems it. An explicit Continue button performs the same-origin POST; ordinary email scanners lack the requesting browser cookie and cannot redeem it. No token is put in local/session storage, analytics, error messages or application logs. Forwarding a link is not an invitation or account creation.
+- All allowed, unknown and throttled email requests return the same 202 message, before SMTP delivery. Delivery failures expose no recipient or SMTP details and cancel the pending token when possible. There is no persistent raw-token outbox or background service; a shutdown can lose an in-flight email, so the owner can request another link. All addresses share ten requests per fifteen minutes, persisted across process restarts. Abuse can delay new links; existing sessions and already-enrolled passkeys remain usable.
+- Pinned SimpleWebAuthn verifies passkey registration and authentication with the exact configured origin/RP ID, user presence and required user verification. Discoverable credentials are required. Login options expose no owner address or credential list. Stored random user handles must match; the library verifies signatures and counter progression. Zero-counter synced passkeys are supported. Only public keys are stored, and only 'none' attestation is accepted; no certificate identity/revocation service is used.
+- Passkey challenges expire after five minutes, are single use, and bind to the requesting browser and ceremony type. Enrollment also binds to the same session and requires sign-in within ten minutes. A failed bound verification consumes its challenge. Up to five passkeys, ten active challenges and thirty ceremony starts per fifteen minutes are allowed. Cross-origin/embedded ceremonies are rejected. Removing a passkey requires recent authentication and revokes all sessions, pending links and challenges. The email fallback remains available after losing a device.
+- Sessions retain random 256-bit tokens with only digests persisted, absolute eight-hour expiry and a ten-session cap. Cookies use `__Host-`, `Secure`, `HttpOnly`, `SameSite=Strict`, `Path=/`, no Domain. Each private request checks current durable state. Sign out revokes the current session; concurrent reads see complete atomic snapshots. An already-authorized in-flight read may complete. Restoring old authentication backups can restore old access; do not restore them blindly.
+- Every authentication mutation requires POST JSON, exact HTTPS Origin, `X-Shoof-Request: 1`, and same-origin Fetch Metadata when present; no CORS or GET mutation exists. Bodies are capped at 2 KiB, or 32 KiB for WebAuthn responses. One mutation executes at a time per process with a five-second connection deadline; the store lock serializes changes across processes. Forwarded IPs cannot reset persisted budgets. Headers and connections are bounded.
 
-Only `/login`, `/login.css` and `/login.mjs` are public, containing generic Shoof UI and no tenant identity/data. Anonymous `/` redirects to `/login`; private assets and `/api/report` return 401. `/api/login` and `/api/logout` are the only HTTP mutations. The report/data routes remain read-only and exact, with no tenant selector, file download, import or sync route. Authentication/store errors fail closed. Missing report state returns 503, never fictional substitute data.
+The library follows the [SimpleWebAuthn server flow](https://simplewebauthn.dev/docs/packages/server); SMTP uses [Nodemailer's TLS transport](https://nodemailer.com/smtp). The [OWASP custom-header CSRF pattern](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#employing-custom-request-headers-for-ajaxapi) is combined with strict Origin and cookie controls.
 
-The content-free `/healthz` exception still requires the actual container-loopback TCP peer and loopback Host. Configure healthchecks there; forwarded headers cannot qualify. Public responses use no-store/noindex, CSP, nosniff and HSTS. Reverse-proxy access logs must omit request bodies/cookies and protect server logs. Use HTTPS redirect at the proxy; do not expose the internal HTTP port.
+Only the generic `/login`, its assets and the locally served pinned WebAuthn browser bundle are public. `/api/session` is authenticated and projects only owner email and passkey identifiers/dates for management. `/api/report` remains presentation-only with no authentication state or account identifiers. Other data/UI paths require authentication. Unknown selectors, source/config files, query routes and old password endpoints return 404. Missing report data returns 503 with no fictional substitute and Sign out remains available.
 
-## Durable data and private storage
+The content-free `/healthz` exception requires the actual loopback TCP peer and loopback Host. All responses use no-store/noindex, CSP, no-referrer and HSTS. Proxy logs must omit request bodies/cookies. Do not capture authenticated request payloads or email-link fragments in telemetry.
 
-Mount the tenant/input files read-only outside `/app`, mode 0600 and owned by the runtime UID. Mount a dedicated Shoof volume at `/var/lib/shoof`, mode 0700, UID 1000. The image runs as `node`; it supports a read-only root filesystem, with only this state mount writable. Bind mounts must be provisioned with matching ownership. Keep all storage ancestors operator-controlled. The same atomic store holds separate tenant-scoped authentication and reporting files; neither is a public asset.
+## Data and imports
 
-`npm run import:report` takes the configured tenant/state paths plus:
+`npm run import:report` uses the private runtime configuration plus `REPORTING_SNAPSHOT_FILE` and optional `REPORTING_OBSERVATIONS_FILE` for that command. It performs no network call. The observation format is unchanged: source IDs must exist in the snapshot, source-native half-open periods are capped at 366 days before enumeration, dates and units retain their provenance, and coverage/reconciliation remain unverified until supported independently. See `src/runtime-data.mjs` and the fictional runtime fixtures for the existing envelope shape.
 
-- `REPORTING_SNAPSHOT_FILE`: external business snapshot matching tenant/workspace/timezone/currency.
-- `REPORTING_OBSERVATIONS_FILE`: optional external dated-observation envelope, shown below.
+Invalid, oversized, cross-tenant, duplicate, future or older inputs preserve the accepted presentation. Unknown extras, customer rows, evidence references and account IDs are stripped. Omitting observations publishes an empty list, with unavailable totals rather than zero. The caller-driven source reader remains separate and disabled; file-save time never refreshes source evidence.
 
-The local command performs no network call. It validates metric evidence gates and publishes projected fields only. Unknown payload extras, customer rows, evidence references and account IDs are excluded. Invalid, oversized, duplicate, cross-tenant, future or older candidates preserve the accepted presentation. Date spans over 366 days are rejected before enumeration. Each publication replaces the whole presentation; omitting observations deliberately publishes an empty list.
+The private store uses an exclusive writer lock, owner-only temporary files, fsync and atomic rename. A crash can leave a lock requiring deliberate operator recovery after confirming the old process stopped. Corrupt state fails closed, never silently resets. Dedicated mounts survive container replacement; this is not distributed storage or a complete backup system.
 
-Exclusive lock, owner-only temporary file, fsync and atomic rename protect the single-host state. A busy operation is retried later; do not delete a live lock. A crash can leave a lock requiring deliberate operator recovery after confirming the old process stopped. Corrupt state fails closed and is not automatically overwritten. Mounts survive container replacement; they are not backups or distributed/power-loss durability guarantees. Preserve private backups outside the web root before updates. Do not blindly restore old authentication sessions.
+## Verification and cutover
 
-## Dated observation envelope
+1. Independently review the exact commit and require green source, privacy and container checks.
+2. Supply approved SMTP configuration, owner email, private mounts and the existing HTTPS proxy. Do not create or borrow SMTP credentials implicitly, restart shared hosting or expose a host port.
+3. Verify the actual HTTPS boundary and persistence with fictional data and a local/captured test mail path first. Verify scanner GETs, wrong-browser/replayed links, logout, protected assets, WebAuthn protocol checks and container restart. Test the configured SMTP relay only after explicit approval to send to the intended recipient.
+4. Have the owner use their real mailbox/device for the first sign-in and optional passkey enrollment. Keep private reports out until the authentication/persistence boundary is verified, then import the reviewed private seed and preserve its dated/unavailable labels.
+5. Keep upstream source credentials and recurring imports under their separate authorization.
 
-This example is fictional and creates no source connection:
+`npm run qa:runtime` is a disposable loopback-only fixture with a local `/qa-inbox`; it sends no email and injects no authenticated session. It adapts Host/Origin only. Real passkey origin/RP verification is exercised using signed fictional authenticator responses, not by creating credentials on the operator's device. Both helpers are excluded from the production Docker context. CI confirms the real production container can verify a fictional magic token and passkey, and retains sessions/passkeys/reports through restart. Actual HTTPS routing, SMTP delivery and a real owner's device remain approved deployment checks.
 
-```json
-{
-  "schemaVersion": 1,
-  "tenantId": "fictional-harbor",
-  "workspaceId": "demo-workspace",
-  "sources": [{
-    "sourceId": "ga4",
-    "period": {"start": "2025-01-01", "endExclusive": "2025-01-03"},
-    "observedAt": "2025-01-04T12:00:00Z",
-    "origin": "ui-snapshot",
-    "sourceTimezone": null,
-    "lastSuccessfulReadAt": null,
-    "metrics": [{
-      "key": "sessions", "label": "Sessions", "unit": "count",
-      "values": [{"date": "2025-01-01", "value": 7}]
-    }]
-  }]
-}
-```
-
-Source IDs must exist in the business snapshot. Periods are half-open and source-native, at most 366 days; unknown timezone remains null. Metrics have unique dated nonnegative integer values in `count` or `seconds`, with no currency/ratio inference. Empty observations have unavailable totals, not zero. Limits: 25 sources, twelve metrics per source, 366 values per metric.
-
-Only origin `synced` may carry a successful-read timestamp, and must provide it; this is a trusted operator assertion, not proof the runtime performed a read. Observations retain unverified coverage, pending reconciliation and `reportReady: false`. They cannot populate business KPIs. The 48-hour recent/stale label is a display heuristic, not proof of coverage. Save time never refreshes source evidence. The caller-driven sync interface remains disabled and separate from publication.
-
-## Deployment and review sequence
-
-1. Independently review the exact source, including authentication and bootstrap, and require current CI. The build context includes only generic source, never tenant inputs, owner passwords or session state.
-2. Configure this app's existing HTTPS proxy, hostname, private tenant input and durable volume. No external identity-provider enrollment is needed. Do not restart shared hosting or expose a host port.
-3. Obtain owner authorization for setup; the owner chooses the password in the hidden terminal prompt. Verify native login and anonymous/direct-origin denial using fictional data first. Verify logout, invalid credentials, protected assets and restart persistence.
-4. Only after the authenticated boundary is verified, copy/import the reviewed private seed and check its original dates, unavailable business gates and owner view. Restart Shoof only and verify both login and data persistence.
-5. Keep source-reader grants and recurring imports separate. This login is not an upstream marketing credential.
-
-`npm run qa:runtime` creates a temporary loopback-only fictional account and data. A QA proxy adapts localhost Origin/Host, but does not inject an authenticated session or bypass native login. It prints that temporary fixture's credentials for browser testing and is excluded from the production image. CI checks native login, mounted data, anonymous denial and session/report persistence after container restart. Actual public HTTPS and owner setup remain deployment checks.
-
-For rollback, preserve the private state and pin a previously reviewed compatible login runtime. Do not roll back to the old Access-only server unless its independent provider gate and origin configuration have first been established. Never expose private static files as a fallback.
+Rollback must preserve the authentication boundary. Never fall back to public private-data files, the obsolete password flow or the former unconfigured provider gate. Retain private backups and a reviewed compatible image before changing production.
