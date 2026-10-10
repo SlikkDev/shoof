@@ -71,6 +71,29 @@ test('durable report survives a separate process and rejected CLI import', async
   assert.deepEqual(await data.read(), before);
 });
 
+for (const target of ['snapshot', 'observations']) test(`distant ${target} period is refused by the bounded-memory import CLI without changing state`, async t => {
+  const f = await fixture(); t.after(f.cleanup);
+  const data = await createRuntimeData(f.config);
+  await data.publish(f.snapshot, f.observations);
+  const stateFile = join(f.directory, (await readdir(f.directory)).find(n => /^[a-f0-9]{64}\.json$/.test(n)));
+  const before = await readFile(stateFile);
+  const period = {start: '0001-01-01', endExclusive: '9999-12-31'};
+  if (target === 'snapshot') f.snapshot.period = period;
+  else f.observations.sources[0].period = period;
+  await writeFile(f.snapshotFile, JSON.stringify(f.snapshot));
+  await writeFile(f.env.REPORTING_OBSERVATIONS_FILE, JSON.stringify(f.observations));
+  const failed = spawnSync(process.execPath, ['--max-old-space-size=64', new URL('../tools/import-report.mjs', import.meta.url).pathname], {
+    env: {...process.env, ...f.env}, encoding: 'utf8', timeout: 10000, maxBuffer: 64 * 1024,
+  });
+  assert.equal(failed.error, undefined);
+  assert.equal(failed.signal, null);
+  assert.equal(failed.status, 1);
+  assert.equal(failed.stdout, '');
+  assert.equal(failed.stderr.trim(), 'Import refused. Previous accepted report was preserved.');
+  assert.deepEqual(await readFile(stateFile), before);
+  assert.equal((await readdir(f.directory)).some(name => name.endsWith('.tmp') || name.endsWith('.lock')), false);
+});
+
 test('tenant identity is frozen, another tenant cannot read state, corruption fails closed', async t => {
   const f = await fixture(); t.after(f.cleanup);
   const data = await createRuntimeData(f.config);

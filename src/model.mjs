@@ -17,10 +17,11 @@ function validatePresentation(snapshot) {
   }
 }
 export function daysInPeriod(period) {
-  if (!validDay(period.start) || !validDay(period.endExclusive) || period.start >= period.endExclusive) throw new Error('Invalid half-open reporting period');
+  if (!period || !validDay(period.start) || !validDay(period.endExclusive) || period.start >= period.endExclusive) throw new Error('Invalid half-open reporting period');
+  const start = Date.parse(period.start), dayCount = (Date.parse(period.endExclusive) - start) / 86400000;
+  if (dayCount > 366) throw new Error('Reporting window is too large');
   const days = [];
-  for (let t = Date.parse(period.start); t < Date.parse(period.endExclusive); t += 86400000) days.push(new Date(t).toISOString().slice(0, 10));
-  if (days.length > 366) throw new Error('Reporting window is too large');
+  for (let i = 0; i < dayCount; i++) days.push(new Date(start + i * 86400000).toISOString().slice(0, 10));
   return days;
 }
 
