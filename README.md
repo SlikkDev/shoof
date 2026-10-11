@@ -17,7 +17,7 @@ Requires Node 22 or newer. Passwordless authentication uses pinned SimpleWebAuth
 
 `npm start` serves one externally allowlisted owner using **magic links and passkeys**. Configure the existing HTTPS hostname, owner email, private tenant/state paths and an approved generic SMTP sender. There is no Shoof password, public registration, default account or external identity-provider enrollment.
 
-Email links expire after ten minutes and require an explicit confirmation in the browser that requested them. Tokens are single use and stored only as hashes. After signing in, the owner can add or remove a passkey from the Passkeys page; changes require recent authentication. Server sessions expire after eight hours, survive restart and revoke on sign-out. CSRF controls and durable rate limits protect the authentication endpoints.
+Email links open on any browser or device and sign in automatically when the page becomes visible. They expire after ten minutes. Tokens are single use and stored only as hashes. After signing in, the owner can add or remove a passkey from the Passkeys page; changes require recent authentication. Server sessions expire after eight hours, survive restart and revoke on sign-out. CSRF controls and durable rate limits protect the authentication endpoints.
 
 `npm run import:report` validates external snapshot/observation files and atomically publishes projected fields. Invalid or older candidates preserve the accepted report. Signing in neither releases metric gates nor starts a marketing connection.
 
