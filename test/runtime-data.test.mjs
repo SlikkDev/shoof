@@ -17,7 +17,7 @@ test('publication retains dated provenance, strips extras and keeps all KPIs gat
   const report = await data.read();
   assert.equal(report.asOf, f.snapshot.asOf);
   assert.equal(report.runtime.evidenceFreshness, 'stale');
-  assert.equal(report.runtime.sourceConnectionsActive, false);
+  assert.equal(report.runtime.sourceReadsRecorded, false);
   assert.equal(report.observations[0].readFreshness, 'unknown');
   assert.equal(report.observations[0].sourceTimezone, null);
   assert.equal(report.observations[0].metrics[0].total, 7);
