@@ -14,6 +14,7 @@
     "preview": "node tools/serve.mjs",
     "qa": "node tools/qa.mjs",
     "privacy": "node tools/privacy-check.mjs",
+    "review:publication": "node tools/publication-check.mjs",
     "start": "node tools/runtime.mjs",
     "import:report": "node tools/import-report.mjs",
     "qa:runtime": "node tools/qa-runtime.mjs",
