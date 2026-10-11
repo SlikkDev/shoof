@@ -31,6 +31,14 @@ function projectReport(value, tenant) {
     disclaimer: 'Private dated report. Source observations are labelled separately; no automatic connection is implied.'};
 }
 
+function projectReads(input, sourceIds) {
+  must(Array.isArray(input) && input.length <= 25 && new Set(input.map(r => r.sourceId)).size === input.length);
+  return input.map(read => {
+    must(sourceIds.includes(read.sourceId) && ['success','failed'].includes(read.status) && stamp(read.startedAt) && stamp(read.finishedAt) && Date.parse(read.finishedAt) >= Date.parse(read.startedAt));
+    return {sourceId: read.sourceId, status: read.status, startedAt: read.startedAt, finishedAt: read.finishedAt, errorCode: read.status === 'failed' ? 'read-failed' : null};
+  });
+}
+
 function projectObservations(input, sourceIds) {
   must(Array.isArray(input) && input.length <= 25 && new Set(input.map(s => s.sourceId)).size === input.length);
   return input.map(source => {
@@ -38,6 +46,7 @@ function projectObservations(input, sourceIds) {
     must(source.sourceTimezone === null || text(source.sourceTimezone, 80));
     if (source.sourceTimezone !== null) new Intl.DateTimeFormat('en', {timeZone: source.sourceTimezone});
     must(source.origin === 'synced' ? stamp(source.lastSuccessfulReadAt) : source.lastSuccessfulReadAt === null);
+    for (const key of ['importCompletedAt','latestRestatementAt']) must(source[key] == null || (stamp(source[key]) && Date.parse(source[key]) <= Date.parse(source.observedAt)));
     const days = daysInPeriod(source.period);
     must(Array.isArray(source.metrics) && source.metrics.length > 0 && source.metrics.length <= 12 && new Set(source.metrics.map(m => m.key)).size === source.metrics.length);
     const metrics = source.metrics.map(metric => {
@@ -48,7 +57,7 @@ function projectObservations(input, sourceIds) {
       must(total === null || Number.isSafeInteger(total));
       return {key: metric.key, label: metric.label, unit: metric.unit, values, total};
     });
-    return {sourceId: source.sourceId, period: {start: source.period.start, endExclusive: source.period.endExclusive}, observedAt: source.observedAt, origin: source.origin, sourceTimezone: source.sourceTimezone, lastSuccessfulReadAt: source.lastSuccessfulReadAt, metrics, coverage: 'unverified', reconciliation: 'pending', reportReady: false};
+    return {sourceId: source.sourceId, period: {start: source.period.start, endExclusive: source.period.endExclusive}, observedAt: source.observedAt, origin: source.origin, sourceTimezone: source.sourceTimezone, lastSuccessfulReadAt: source.lastSuccessfulReadAt, importCompletedAt: source.importCompletedAt ?? null, latestRestatementAt: source.latestRestatementAt ?? null, metrics, coverage: 'unverified', reconciliation: 'pending', reportReady: false};
   });
 }
 
@@ -59,10 +68,11 @@ export async function createRuntimeData({tenant, directory}) {
   const scope = {tenantId: tenant.tenantId, sourceId: 'reporting', jobId: 'published-view'};
   function unpack(state) {
     must(state?.schemaVersion === 1 && state.tenantId === tenant.tenantId && state.workspaceId === tenant.workspaceId && stamp(state.acceptedAt));
-    must(state.digest === hash({report: state.report, observations: state.observations}));
+    must(state.digest === hash({report: state.report, observations: state.observations, ...(state.reads ? {reads: state.reads} : {})}));
     const report = projectReport(state.report, tenant);
     const observations = projectObservations(state.observations, report.sources.map(s => s.id));
-    return {report, observations, acceptedAt: state.acceptedAt};
+    const reads = projectReads(state.reads ?? [], report.sources.map(s => s.id));
+    return {report, observations, reads, acceptedAt: state.acceptedAt};
   }
   return Object.freeze({
     async publish(snapshot, observationInput = null) {
@@ -71,8 +81,10 @@ export async function createRuntimeData({tenant, directory}) {
       const observations = projectObservations(observationInput?.sources ?? [], report.sources.map(s => s.id));
       const result = await store.withLock(scope, async transaction => {
         const previous = await transaction.read();
+        let reads = [];
         if (previous) {
           const accepted = unpack(previous);
+          reads = accepted.reads.filter(read => report.sources.some(source => source.id === read.sourceId));
           must(Date.parse(report.asOf) >= Date.parse(accepted.report.asOf));
           for (const source of observations) {
             const prior = accepted.observations.find(item => item.sourceId === source.sourceId);
@@ -82,10 +94,38 @@ export async function createRuntimeData({tenant, directory}) {
         const acceptedAt = new Date().toISOString();
         must(Date.parse(report.asOf) <= Date.parse(acceptedAt));
         for (const source of observations) must(Date.parse(source.observedAt) <= Date.parse(acceptedAt) && (source.lastSuccessfulReadAt === null || Date.parse(source.lastSuccessfulReadAt) <= Date.parse(source.observedAt)));
-        await transaction.write({schemaVersion: 1, tenantId: tenant.tenantId, workspaceId: tenant.workspaceId, acceptedAt, report, observations, digest: hash({report, observations})});
+        await transaction.write({schemaVersion: 1, tenantId: tenant.tenantId, workspaceId: tenant.workspaceId, acceptedAt, report, observations, reads, digest: hash({report, observations, reads})});
         return {status: 'published', acceptedAt};
       });
       if (result.status !== 'published') throw new Error('Reporting state busy');
+      return result;
+    },
+    // Local atomic publication of one validated read. No network or recurrence.
+    // A failed attempt changes only health; the last accepted evidence survives.
+    async recordSourceRead({tenantId, workspaceId, attempt, observation = null, currentTenantId}) {
+      must(tenantId === tenant.tenantId && workspaceId === tenant.workspaceId && typeof currentTenantId === 'function' && currentTenantId() === tenant.tenantId);
+      const result = await store.withLock(scope, async transaction => {
+        const previous = await transaction.read(), accepted = unpack(previous);
+        const [read] = projectReads([attempt], accepted.report.sources.map(s => s.id));
+        must(Date.parse(read.finishedAt) <= Date.now());
+        const prior = accepted.reads.find(item => item.sourceId === read.sourceId);
+        must(!prior || Date.parse(read.startedAt) >= Date.parse(prior.finishedAt));
+        let observations = accepted.observations;
+        if (read.status === 'success') {
+          const [source] = projectObservations([observation], accepted.report.sources.map(s => s.id));
+          must(source.sourceId === read.sourceId && source.origin === 'synced' && source.lastSuccessfulReadAt === source.observedAt);
+          must(Date.parse(source.observedAt) >= Date.parse(read.startedAt) && Date.parse(source.observedAt) <= Date.parse(read.finishedAt));
+          const older = observations.find(item => item.sourceId === source.sourceId);
+          must(!older || Date.parse(source.observedAt) >= Date.parse(older.observedAt));
+          observations = [...observations.filter(item => item.sourceId !== source.sourceId), source];
+        } else must(observation === null);
+        const reads = [...accepted.reads.filter(item => item.sourceId !== read.sourceId), read];
+        const report = accepted.report;
+        const committed = await transaction.write({...previous, report, observations, reads, digest: hash({report, observations, reads})}, {shouldCommit: () => currentTenantId() === tenant.tenantId});
+        must(committed !== false);
+        return {status: read.status};
+      });
+      if (!['success','failed'].includes(result.status)) throw new Error('Reporting state busy');
       return result;
     },
     async read(now = new Date()) {
@@ -96,7 +136,7 @@ export async function createRuntimeData({tenant, directory}) {
       });
       if (result.status === 'busy') throw new Error('Reporting state busy');
       const freshness = timestamp => !timestamp || Date.parse(timestamp) > +now ? 'unknown' : +now - Date.parse(timestamp) > 48 * 3600000 ? 'stale' : 'recent';
-      return {...result.report, runtime: {acceptedAt: result.acceptedAt, evidenceFreshness: freshness(result.report.asOf), sourceConnectionsActive: false}, observations: result.observations.map(source => ({...source, evidenceFreshness: freshness(source.observedAt), readFreshness: freshness(source.lastSuccessfulReadAt)}))};
+      return {...result.report, runtime: {acceptedAt: result.acceptedAt, evidenceFreshness: freshness(result.report.asOf), sourceReadsRecorded: result.observations.some(source => source.origin === 'synced'), reads: result.reads.map(read => ({...read, readFreshness: freshness(read.finishedAt)}))}, observations: result.observations.map(source => ({...source, evidenceFreshness: freshness(source.observedAt), readFreshness: freshness(source.lastSuccessfulReadAt), importFreshness: freshness(source.importCompletedAt), matchesReportPeriod: source.period.start === result.report.period.start && source.period.endExclusive === result.report.period.endExclusive}))};
     }
   });
 }

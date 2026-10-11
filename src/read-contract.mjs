@@ -4,8 +4,11 @@ function validateContext(context) {
   const {tenantId,sourceId,accountIds,metricKeys,period,timezone}=context;
   if (!identifier(tenantId)||!identifier(sourceId)||!Array.isArray(accountIds)||!accountIds.length||accountIds.some(x=>!identifier(x))||new Set(accountIds).size!==accountIds.length) throw new Error('Verified tenant/source/accounts required');
   if (!Array.isArray(metricKeys)||!metricKeys.length||metricKeys.some(x=>!identifier(x))||new Set(metricKeys).size!==metricKeys.length) throw new Error('Metric allowlist required');
-  if (typeof timezone !== 'string' || !timezone) throw new Error('Explicit source timezone required');
-  new Intl.DateTimeFormat('en',{timeZone:timezone}); daysInPeriod(period);
+  if (timezone !== null) {
+    if (typeof timezone !== 'string' || !timezone) throw new Error('Explicit source timezone or null (unverified) required');
+    new Intl.DateTimeFormat('en',{timeZone:timezone});
+  }
+  daysInPeriod(period);
 }
 export function normalizeObservationPage(page,context) {
   validateContext(context);
