@@ -13,6 +13,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: '22'
@@ -22,5 +23,10 @@ jobs:
       - run: npm run check
       - run: npm run build
       - run: npm run privacy
+      - name: Check outgoing committed source
+        if: github.event_name == 'pull_request'
+        env:
+          PUBLICATION_BASE: ${{ github.event.pull_request.base.sha }}
+        run: npm run review:publication -- "$PUBLICATION_BASE"
       - run: docker build -t shoof-runtime:check .
       - run: npm run check:container
