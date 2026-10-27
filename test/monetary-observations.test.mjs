@@ -22,8 +22,9 @@ test('dated monetary diagnostics preserve cents and leave every business KPI unc
   const data=await createRuntimeData(f.config);
   await data.publish(f.snapshot,f.observations);
   const before=await data.read();
+  const baseline=await f.publicationBaseline();
   money(f);
-  await data.publish(f.snapshot,f.observations);
+  await data.publish(f.snapshot,f.observations,baseline);
   const after=await data.read(),source=after.observations[0];
   assert.equal(source.metrics[0].total,303);
   assert.equal(source.metrics[0].currency,'EUR');
@@ -42,6 +43,7 @@ test('unknown or omitted currency, unsafe amounts and invalid notes preserve acc
   const f=await fixture();t.after(f.cleanup);money(f);
   const data=await createRuntimeData(f.config);
   await data.publish(f.snapshot,f.observations);const before=await data.read();
+  const baseline=await f.publicationBaseline();
   for (const change of [
     s=>{delete s.metrics[0].currency;},s=>{s.metrics[0].currency='JPY';},s=>{s.metrics[0].currency=['EUR'];},
     s=>{s.metrics[0].values[0].value=1.01;},s=>{s.metrics[0].values[0].value=-1;},
@@ -49,7 +51,7 @@ test('unknown or omitted currency, unsafe amounts and invalid notes preserve acc
     s=>{s.note='x'.repeat(601);},s=>{s.note='invalid\nannotation';},s=>{s.note={raw:'not text'};}
   ]) {
     const candidate=structuredClone(f.observations);change(candidate.sources[0]);
-    await assert.rejects(data.publish(f.snapshot,candidate));
+    await assert.rejects(data.publish(f.snapshot,candidate,baseline));
     assert.deepEqual(await data.read(),before);
   }
 });
@@ -60,8 +62,9 @@ test('empty money observations stay unavailable, zero stays explicit and mismatc
   source.metrics[0].values=[];
   const data=await createRuntimeData(f.config);await data.publish(f.snapshot,f.observations);
   assert.equal((await data.read()).observations[0].metrics[0].total,null);
+  const baseline=await f.publicationBaseline();
   source.metrics[0].values=[{date:'2025-02-01',value:0}];
-  await data.publish(f.snapshot,f.observations);
+  await data.publish(f.snapshot,f.observations,baseline);
   const result=(await data.read()).observations[0];
   assert.equal(result.metrics[0].total,0);
   assert.equal(result.metrics[0].values.length,1);

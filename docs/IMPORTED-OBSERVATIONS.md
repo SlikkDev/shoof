@@ -53,7 +53,14 @@ time and a null successful-read time. File preparation is not a source read.
 These observations appear beneath the report as dated evidence. They cannot
 change any business KPI, source readiness, coverage or reconciliation gate.
 Private import preparation must preserve other observations and the existing
-snapshot; verify the live baseline again before applying a prepared package.
+snapshot. Capture the private report state's `digest` in the package manifest
+and pass it as `REPORTING_EXPECTED_DIGEST` to the import command. The writer
+checks it under its lock and refuses a changed baseline, including a correction
+with the same timestamp or an additional source. A preflight file comparison
+alone is not sufficient. Rebuild and review a stale package against the newer
+evidence; never just substitute the new digest to force an old package through.
+`absent` is only for the first import into an empty report store. See
+`docs/RUNTIME.md` for the import contract.
 No HTTP upload route, credential entry form or scheduler is added.
 
 Deploy reviewed code before importing a monetary observation: older runtimes

@@ -77,15 +77,20 @@ export async function createRuntimeData({tenant, directory}) {
     return {report, observations, reads, acceptedAt: state.acceptedAt};
   }
   return Object.freeze({
-    async publish(snapshot, observationInput = null) {
+    async publish(snapshot, observationInput = null, {expectedDigest = null} = {}) {
+      // Null means bootstrap only, never an unconditional replacement.
+      must(expectedDigest === null || (typeof expectedDigest === 'string' && /^[a-f0-9]{64}$/.test(expectedDigest)));
       const report = projectReport(createReport(tenant, snapshot), tenant);
       if (observationInput) must(observationInput.schemaVersion === 1 && observationInput.workspaceId === tenant.workspaceId && observationInput.tenantId === tenant.tenantId);
       const observations = projectObservations(observationInput?.sources ?? [], report.sources.map(s => s.id));
       const result = await store.withLock(scope, async transaction => {
         const previous = await transaction.read();
+        const accepted = previous ? unpack(previous) : null;
+        // Compare after acquiring the same lock used by source-read writers.
+        // Timestamps alone cannot detect corrections or newly added sources.
+        if ((previous?.digest ?? null) !== expectedDigest) throw new Error('Reporting baseline changed');
         let reads = [];
-        if (previous) {
-          const accepted = unpack(previous);
+        if (accepted) {
           reads = accepted.reads.filter(read => report.sources.some(source => source.id === read.sourceId));
           must(Date.parse(report.asOf) >= Date.parse(accepted.report.asOf));
           for (const source of observations) {

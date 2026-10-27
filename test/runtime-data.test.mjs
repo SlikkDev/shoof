@@ -33,14 +33,15 @@ test('invalid, cross-tenant, older and duplicate candidates preserve accepted fi
   const data = await createRuntimeData(f.config);
   await data.publish(f.snapshot, f.observations);
   const before = await data.read();
+  const baseline = await f.publicationBaseline();
   for (const change of [s => {s.workspaceId = 'another-fictional-workspace';}, s => {s.period.endExclusive = s.period.start;}, s => {s.asOf = '2020-01-01T00:00:00Z';}, s => {s.asOf = '2099-01-01T00:00:00Z';}]) {
     const snapshot = structuredClone(f.snapshot); change(snapshot);
-    await assert.rejects(data.publish(snapshot, f.observations));
+    await assert.rejects(data.publish(snapshot, f.observations, baseline));
     assert.deepEqual(await data.read(), before);
   }
   for (const change of [o => {o.tenantId = 'another-fictional-tenant';}, o => {o.sources[0].metrics[0].values.push({...o.sources[0].metrics[0].values[0]});}, o => {o.sources[0].lastSuccessfulReadAt = f.snapshot.asOf;}, o => {o.sources[0].metrics[0].values[0].value = -1;}, o => {o.sources[0].observedAt = '2020-01-01T00:00:00Z';}]) {
     const observations = structuredClone(f.observations); change(observations);
-    await assert.rejects(data.publish(f.snapshot, observations));
+    await assert.rejects(data.publish(f.snapshot, observations, baseline));
     assert.deepEqual(await data.read(), before);
   }
 });
@@ -51,8 +52,9 @@ test('empty observations are unavailable, never zero-filled; explicit zero remai
   f.observations.sources[0].metrics[0].values = [];
   await data.publish(f.snapshot, f.observations);
   assert.equal((await data.read()).observations[0].metrics[0].total, null);
+  const baseline = await f.publicationBaseline();
   f.observations.sources[0].metrics[0].values = [{date: f.snapshot.period.start, value: 0}];
-  await data.publish(f.snapshot, f.observations);
+  await data.publish(f.snapshot, f.observations, baseline);
   assert.equal((await data.read()).observations[0].metrics[0].total, 0);
 });
 
@@ -77,13 +79,14 @@ for (const target of ['snapshot', 'observations']) test(`distant ${target} perio
   await data.publish(f.snapshot, f.observations);
   const stateFile = join(f.directory, (await readdir(f.directory)).find(n => /^[a-f0-9]{64}\.json$/.test(n)));
   const before = await readFile(stateFile);
+  const baseline = await f.publicationBaseline();
   const period = {start: '0001-01-01', endExclusive: '9999-12-31'};
   if (target === 'snapshot') f.snapshot.period = period;
   else f.observations.sources[0].period = period;
   await writeFile(f.snapshotFile, JSON.stringify(f.snapshot));
   await writeFile(f.env.REPORTING_OBSERVATIONS_FILE, JSON.stringify(f.observations));
   const failed = spawnSync(process.execPath, ['--max-old-space-size=64', new URL('../tools/import-report.mjs', import.meta.url).pathname], {
-    env: {...process.env, ...f.env}, encoding: 'utf8', timeout: 10000, maxBuffer: 64 * 1024,
+    env: {...process.env, ...f.env, REPORTING_EXPECTED_DIGEST: baseline.expectedDigest}, encoding: 'utf8', timeout: 10000, maxBuffer: 64 * 1024,
   });
   assert.equal(failed.error, undefined);
   assert.equal(failed.signal, null);
@@ -113,8 +116,9 @@ test('concurrent readers see a complete old/new report or busy, never a partial 
   const f = await fixture(); t.after(f.cleanup);
   const data = await createRuntimeData(f.config);
   await data.publish(f.snapshot, f.observations);
+  const baseline = await f.publicationBaseline();
   f.observations.sources[0].metrics[0].values[0].value = 9;
-  const attempts = await Promise.allSettled([data.publish(f.snapshot, f.observations), ...Array.from({length: 12}, () => data.read())]);
+  const attempts = await Promise.allSettled([data.publish(f.snapshot, f.observations, baseline), ...Array.from({length: 12}, () => data.read())]);
   for (const result of attempts.slice(1)) {
     if (result.status === 'fulfilled') assert.ok([7,9].includes(result.value.observations[0].metrics[0].total));
     else assert.match(result.reason.message, /busy/);
