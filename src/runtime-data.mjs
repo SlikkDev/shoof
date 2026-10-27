@@ -46,18 +46,20 @@ function projectObservations(input, sourceIds) {
     must(source.sourceTimezone === null || text(source.sourceTimezone, 80));
     if (source.sourceTimezone !== null) new Intl.DateTimeFormat('en', {timeZone: source.sourceTimezone});
     must(source.origin === 'synced' ? stamp(source.lastSuccessfulReadAt) : source.lastSuccessfulReadAt === null);
+    must(source.note == null || text(source.note, 600));
     for (const key of ['importCompletedAt','latestRestatementAt']) must(source[key] == null || (stamp(source[key]) && Date.parse(source[key]) <= Date.parse(source.observedAt)));
     const days = daysInPeriod(source.period);
     must(Array.isArray(source.metrics) && source.metrics.length > 0 && source.metrics.length <= 12 && new Set(source.metrics.map(m => m.key)).size === source.metrics.length);
     const metrics = source.metrics.map(metric => {
-      must(text(metric.key, 80) && text(metric.label, 80) && ['count', 'seconds'].includes(metric.unit));
+      must(text(metric.key, 80) && text(metric.label, 80) && ['count', 'seconds', 'currency-minor'].includes(metric.unit));
+      if (metric.unit === 'currency-minor') must(['USD', 'EUR', 'GBP', 'ILS'].includes(metric.currency));
       must(Array.isArray(metric.values) && metric.values.length <= 366 && new Set(metric.values.map(v => v.date)).size === metric.values.length);
       const values = metric.values.map(row => { must(days.includes(row.date) && Number.isSafeInteger(row.value) && row.value >= 0); return {date: row.date, value: row.value}; });
       const total = values.length ? values.reduce((sum, row) => sum + row.value, 0) : null;
       must(total === null || Number.isSafeInteger(total));
-      return {key: metric.key, label: metric.label, unit: metric.unit, values, total};
+      return {key: metric.key, label: metric.label, unit: metric.unit, ...(metric.unit === 'currency-minor' ? {currency: metric.currency} : {}), values, total};
     });
-    return {sourceId: source.sourceId, period: {start: source.period.start, endExclusive: source.period.endExclusive}, observedAt: source.observedAt, origin: source.origin, sourceTimezone: source.sourceTimezone, lastSuccessfulReadAt: source.lastSuccessfulReadAt, importCompletedAt: source.importCompletedAt ?? null, latestRestatementAt: source.latestRestatementAt ?? null, metrics, coverage: 'unverified', reconciliation: 'pending', reportReady: false};
+    return {sourceId: source.sourceId, period: {start: source.period.start, endExclusive: source.period.endExclusive}, observedAt: source.observedAt, origin: source.origin, sourceTimezone: source.sourceTimezone, ...(source.note == null ? {} : {note: source.note}), lastSuccessfulReadAt: source.lastSuccessfulReadAt, importCompletedAt: source.importCompletedAt ?? null, latestRestatementAt: source.latestRestatementAt ?? null, metrics, coverage: 'unverified', reconciliation: 'pending', reportReady: false};
   });
 }
 
@@ -75,15 +77,20 @@ export async function createRuntimeData({tenant, directory}) {
     return {report, observations, reads, acceptedAt: state.acceptedAt};
   }
   return Object.freeze({
-    async publish(snapshot, observationInput = null) {
+    async publish(snapshot, observationInput = null, {expectedDigest = null} = {}) {
+      // Null means bootstrap only, never an unconditional replacement.
+      must(expectedDigest === null || (typeof expectedDigest === 'string' && /^[a-f0-9]{64}$/.test(expectedDigest)));
       const report = projectReport(createReport(tenant, snapshot), tenant);
       if (observationInput) must(observationInput.schemaVersion === 1 && observationInput.workspaceId === tenant.workspaceId && observationInput.tenantId === tenant.tenantId);
       const observations = projectObservations(observationInput?.sources ?? [], report.sources.map(s => s.id));
       const result = await store.withLock(scope, async transaction => {
         const previous = await transaction.read();
+        const accepted = previous ? unpack(previous) : null;
+        // Compare after acquiring the same lock used by source-read writers.
+        // Timestamps alone cannot detect corrections or newly added sources.
+        if ((previous?.digest ?? null) !== expectedDigest) throw new Error('Reporting baseline changed');
         let reads = [];
-        if (previous) {
-          const accepted = unpack(previous);
+        if (accepted) {
           reads = accepted.reads.filter(read => report.sources.some(source => source.id === read.sourceId));
           must(Date.parse(report.asOf) >= Date.parse(accepted.report.asOf));
           for (const source of observations) {

@@ -2,6 +2,7 @@
 import { readFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createObservationStore } from '../src/observation-store.mjs';
 
 export async function fixture() {
   const directory = await mkdtemp(join(tmpdir(), 'shoof-fictional-'));
@@ -15,6 +16,12 @@ export async function fixture() {
   const config = {tenant, directory, publicHost, ownerEmail:email, smtp, port: 0, host: '127.0.0.1'};
   const tenantFile = join(directory, 'tenant.json'), snapshotFile = join(directory, 'snapshot.json'), observationsFile = join(directory, 'observations.json'), smtpFile = join(directory, 'smtp.json');
   for (const [path, value] of [[smtpFile, smtp], [tenantFile, tenant], [snapshotFile, snapshot], [observationsFile, observations]]) await writeFile(path, JSON.stringify(value), {mode: 0o600});
-  const env = {REPORTING_TENANT_FILE: tenantFile, REPORTING_SNAPSHOT_FILE: snapshotFile, REPORTING_OBSERVATIONS_FILE: observationsFile, REPORTING_STATE_DIR: directory, REPORTING_PUBLIC_HOST: publicHost, REPORTING_OWNER_EMAIL: email, REPORTING_SMTP_FILE: smtpFile};
-  return {directory, tenant, snapshot, observations, publicHost, email, config, env, tenantFile, snapshotFile, cleanup: () => rm(directory, {recursive: true, force: true})};
+  const env = {REPORTING_TENANT_FILE: tenantFile, REPORTING_SNAPSHOT_FILE: snapshotFile, REPORTING_OBSERVATIONS_FILE: observationsFile, REPORTING_STATE_DIR: directory, REPORTING_PUBLIC_HOST: publicHost, REPORTING_OWNER_EMAIL: email, REPORTING_SMTP_FILE: smtpFile, REPORTING_EXPECTED_DIGEST: 'absent'};
+  // Synthetic tests capture this once before preparing a replacement candidate.
+  const publicationBaseline = async () => {
+    const store = await createObservationStore(directory);
+    const state = await store.read({tenantId: tenant.tenantId, sourceId: 'reporting', jobId: 'published-view'});
+    return {expectedDigest: state?.digest ?? null};
+  };
+  return {directory, tenant, snapshot, observations, publicHost, email, config, env, tenantFile, snapshotFile, publicationBaseline, cleanup: () => rm(directory, {recursive: true, force: true})};
 }
