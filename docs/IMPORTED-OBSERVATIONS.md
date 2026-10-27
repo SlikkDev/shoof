@@ -34,5 +34,29 @@ of the identified member, exact account/workspace policy, lifetime and private
 secret destination. Use a fixed-period probe first. Native timezone and source
 completeness/reconciliation must be reviewed before completed-day recurrence.
 No production read, credential, grant, deployment or schedule is enabled here.
-Paid media needs separate server policy/projections and currency-aware minor-unit
-observations; no monetary values should be encoded as counts.
+Paid media still needs separate server policy/projections. Manual source
+diagnostics may use `unit: 'currency-minor'` with an explicit per-metric
+`currency` of USD, EUR, GBP or ILS. Values and totals remain nonnegative safe
+integer minor units; unsupported currencies are refused. Display retains both
+fractional digits, including at the safe-integer boundary, and never converts
+between currencies or borrows the report currency. Missing dates remain absent;
+an empty series has an unavailable total. Do not encode monetary values as counts.
+
+An optional source `note` (at most 600 characters) can explain a diagnostic's
+dated basis and exclusions. It is escaped when rendered. Supply only reviewed
+explanatory text, without customer data, account identifiers, evidence URLs or
+credentials. A provider-charge diagnostic must state that it is not settled
+cash; reference matching does not establish current ledger balances, sale
+allocation or attribution. Use origin `manual`, the evidence's actual observed
+time and a null successful-read time. File preparation is not a source read.
+
+These observations appear beneath the report as dated evidence. They cannot
+change any business KPI, source readiness, coverage or reconciliation gate.
+Private import preparation must preserve other observations and the existing
+snapshot; verify the live baseline again before applying a prepared package.
+No HTTP upload route, credential entry form or scheduler is added.
+
+Deploy reviewed code before importing a monetary observation: older runtimes
+reject the new unit. After import, rollback requires a compatible runtime or a
+reviewed report-only removal of that observation that preserves newer evidence.
+Never restore authentication state or an obsolete report backup blindly.
