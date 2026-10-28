@@ -14,7 +14,7 @@ source's observation and updates the attempt receipt. Failed reads update only
 sanitized health and preserve previous evidence and successful-read time. Late,
 future, tenant-mismatched and malformed publications fail closed. A current-tenant
 callback is rechecked at the final write boundary. There is no HTTP write route,
-source credential loader, network connector or scheduler in Shoof.
+GA4 credential loader, network connector or scheduler in this adapter. The opt-in Google Ads path is documented in `GOOGLE-ADS-READER.md`.
 
 The UI shows recorded origin/read time, latest attempt status, import completion,
 restatement time, stale state and the unknown-coverage warning. It does not infer

@@ -1,6 +1,6 @@
 # Shoof
 
-A reusable local dashboard and metric engine with four views: results, funnel, channels and data health. The included **Harbor & Pine** tenant and every displayed value are fictional examples. No live connector, credential, customer export, hosted deployment or active scheduler is included.
+A reusable local dashboard and metric engine with four views: results, funnel, channels and data health. The included **Harbor & Pine** tenant and every displayed value are fictional examples. The optional Google Ads reader consumes existing oToK imports; no credential, customer export, hosted deployment or active scheduler is included.
 
 ```sh
 npm ci --ignore-scripts
@@ -43,7 +43,8 @@ The presentation response excludes workspace/account identities, evidence URLs, 
 
 - `src/read-contract.mjs`: injected, paginated aggregate-read interface with scope/date checks, duplicate/cursor protection and field allowlisting. It performs no network request itself. A trusted connector must enforce its actual authorized, read-only API operations.
 - `src/manual-import.mjs`: dated JSON aggregate import with source units and a content hash. Parsing and exhausted pagination do not establish coverage or reconciliation.
-- `src/sync.mjs` and `src/observation-store.mjs`: caller-driven sync ticks, bounded private persistence, overlap protection and separate read freshness. Disabled by default; no timer or live transport. See `docs/SYNC.md` for the private-host contract and recovery limits.
+- `src/sync.mjs` and `src/observation-store.mjs`: caller-driven sync ticks, bounded private persistence, overlap protection and separate read freshness. Disabled by default; no timer. See `docs/SYNC.md` for the private-host contract and recovery limits.
+- `src/google-ads-reader.mjs` and `tools/read-google-ads.mjs`: opt-in bounded reader for existing oToK Google Ads imports, with private receipt storage and source publication. See [scope and activation](docs/GOOGLE-ADS-READER.md). No schedule or credential is configured.
 - `docs/INTEGRATION.md`: automated/manual source sequence and evidence gates.
 - `docs/DATA-BOUNDARIES.md`: nonsecret tenant configuration, private observations and secrets.
 - `docs/RELEASE-REVIEW.md`: source review and licensing notes.

@@ -65,7 +65,7 @@ function health(state, job, now) {
 
 // One caller-driven tick; no cron, timers, network binding or credential loader.
 // The trusted private host owns authorization, transport timeouts and recurrence.
-export async function runSyncTick({enabled = false, job: input, store, transport, currentTenantId, clock = () => new Date().toISOString()}) {
+export async function runSyncTick({enabled = false, job: input, store, transport, currentTenantId, publishAttempt = null, clock = () => new Date().toISOString()}) {
   if (enabled !== true) return {status: 'disabled'};
   const job = projectJob(input), now = timestamp(clock());
   if (typeof currentTenantId !== 'function' || currentTenantId() !== job.scope.tenantId || typeof transport !== 'function') throw new Error('Authorized read context required');
@@ -93,6 +93,13 @@ export async function runSyncTick({enabled = false, job: input, store, transport
       nextDueAt: new Date(Date.parse(finishedAt) + job.intervalMs).toISOString(),
       observation: succeeded ? {...observation, collectedAt: finishedAt} : observation
     };
+    // Publish while holding the job lock, before acknowledging its completion.
+    // Publication failure leaves a durable running marker: an operator must
+    // inspect/recover it, never silently skip publication or repeat the read.
+    if (publishAttempt !== null) {
+      if (typeof publishAttempt !== 'function' || !sameTenant()) throw new Error('Authorized publisher required');
+      await publishAttempt({...finished.lastAttempt});
+    }
     // Re-project at the persistence boundary; no provider payload or injected extras survive.
     const committed = await transaction.write(projectState(finished, job), {shouldCommit: succeeded ? sameTenant : () => true});
     if (committed === false) {

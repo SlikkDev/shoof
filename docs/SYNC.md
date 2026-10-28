@@ -48,3 +48,11 @@ An exclusive directory lock prevents overlapping processes from reading the same
 | `coverage`, `reconciliation`, `reportReady` | Always unverified, pending and false in this interface |
 
 A recent read can contain old or incomplete source data. The metric engine's existing evidence gates remain independent. No business KPI is populated by this sync state, and no raw state endpoint or browser exposure is added. The host must still enforce read-only operations: passing `kind: read-observations` is not a provider authorization mechanism.
+
+An optional `publishAttempt` callback runs under the job lock after collection
+and before the final job-state write. It must publish the accepted source or
+sanitized failure through the existing report writer. If it throws, the durable
+attempt remains running and requires operator inspection. This avoids advancing
+the next due time after a failed report publication. It is not a distributed
+transaction; a later job-state failure can occur after report publication.
+See `GOOGLE-ADS-READER.md` for the concrete caller and recovery boundary.
