@@ -1,10 +1,11 @@
 // Isolated fictional container check. No deployment, email or real authenticator.
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { fixture } from './runtime-fixtures.mjs';
 import { fakeAuthenticator } from './passkey-fixtures.mjs';
 import { createAuth } from '../src/auth.mjs';
+const image=process.env.REPORTING_TEST_IMAGE ?? 'shoof-runtime:check';
 const run=args=>execFileSync('docker',args,{encoding:'utf8'}).trim();
 const f=await fixture(), name='shoof-test-'+randomUUID();
 const mail=await(await createAuth(f.config)).requestMagic(f.email);
@@ -15,9 +16,14 @@ const h={host:f.publicHost,origin:'https://'+f.publicHost,'content-type':'applic
 const send=(path,method='GET',headers=h,body={})=>JSON.parse(run(['exec',name,'node','--input-type=module','-e',script,path,method,JSON.stringify(headers),JSON.stringify(body)]));
 let running=false;
 try{
- assert.equal(run(['image','inspect','shoof-runtime:check','--format','{{.Config.User}}']),'node');
- run(['run','--rm',...common,'shoof-runtime:check','node','tools/import-report.mjs']);
- run(['run','-d','--name',name,...common,'shoof-runtime:check']);running=true;
+ assert.equal(run(['image','inspect',image,'--format','{{.Config.User}}']),'node');
+ for(const enabled of ['false','true']) {
+  const probe=spawnSync('docker',['run','--rm','--network','none','--read-only','-e','REPORTING_GOOGLE_ADS_ENABLED='+enabled,image,'node','tools/read-google-ads.mjs'],{encoding:'utf8'});
+  assert.equal(probe.status,1);assert.match(probe.stderr,/Google Ads reader stopped/);assert.doesNotMatch(probe.stderr,/MODULE_NOT_FOUND/);
+ }
+
+ run(['run','--rm',...common,image,'node','tools/import-report.mjs']);
+ run(['run','-d','--name',name,...common,image]);running=true;
  const waitProbe="let status=0;for(let i=0;i<50;i++){try{const r=await fetch('http://127.0.0.1:8080/healthz');status=r.status;if(status===200)break;}catch{}await new Promise(r=>setTimeout(r,100));}console.log(status);";
  const healthy=()=>assert.equal(run(['exec',name,'node','--input-type=module','-e',waitProbe]),'200');healthy();
  assert.equal(send('/api/report').status,401);
